@@ -17,6 +17,7 @@
 	import MQTT from '~icons/tabler/topology-star-3';
 	import NTP from '~icons/tabler/clock-check';
 	import Metrics from '~icons/tabler/report-analytics';
+	import HeatRateMonitor from '~icons/tabler/heart-rate-monitor';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { user } from '$lib/stores/user';
@@ -49,9 +50,16 @@
 
 	let menuItems = [
 		{
-			title: 'Demo App',
+			title: 'Monitor',
+			icon: HeatRateMonitor,
+			href: '/monitor',
+			feature: true,
+			active: false
+		},
+		{
+			title: 'Configuration',
 			icon: Control,
-			href: '/demo',
+			href: '/configuration',
 			feature: true,
 			active: false
 		},

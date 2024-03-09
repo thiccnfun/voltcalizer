@@ -13,40 +13,47 @@
  **/
 
 #include <ESP32SvelteKit.h>
-#include <LightMqttSettingsService.h>
-#include <LightStateService.h>
-#include <PsychicHttpServer.h>
+#include <AppSettingsService.h>
+#include <MicStateService.h>
+// #include <PsychicHttpServer.h>
 
-#define SERIAL_BAUD_RATE 115200
-
+// -------------
 PsychicHttpServer server;
 
-ESP32SvelteKit esp32sveltekit(&server, 120);
+ESP32SvelteKit esp32sveltekit(&server, 115);
 
-LightMqttSettingsService lightMqttSettingsService =
-    LightMqttSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager());
+AppSettingsService appSettingsService =
+    AppSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager());
 
-LightStateService lightStateService = LightStateService(&server,
+MicStateService micStateService = MicStateService(&server,
                                                         esp32sveltekit.getSecurityManager(),
                                                         esp32sveltekit.getMqttClient(),
-                                                        &lightMqttSettingsService);
+                                                        &appSettingsService,
+                                                        esp32sveltekit.getNotificationEvents());
 
+
+
+
+#define SERIAL_BAUD_RATE 115200
 void setup()
 {
-    // start serial and filesystem
-    Serial.begin(SERIAL_BAUD_RATE);
+  // start serial and filesystem
+  Serial.begin(SERIAL_BAUD_RATE);
 
-    // start ESP32-SvelteKit
+  
+
+
+
+
+  delay(1000); // Safety
+
+
     esp32sveltekit.begin();
-
-    // load the initial light settings
-    lightStateService.begin();
-    // start the light service
-    lightMqttSettingsService.begin();
+    appSettingsService.begin();
+    micStateService.begin();
 }
 
 void loop()
 {
-    // Delete Arduino loop task, as it is not needed in this example
-    vTaskDelete(NULL);
+  vTaskDelete(NULL);
 }
