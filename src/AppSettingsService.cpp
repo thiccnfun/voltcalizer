@@ -14,7 +14,7 @@
 
 #include <AppSettingsService.h>
 
-AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager) : _httpEndpoint(AppSettings::read,
+AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager, CH8803 *collar) : _httpEndpoint(AppSettings::read,
                                                                                                                                         AppSettings::update,
                                                                                                                                         this,
                                                                                                                                         server,
@@ -28,12 +28,75 @@ AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, Securi
                                                                                                             server,
                                                                                                             APP_SETTINGS_SOCKET_PATH,
                                                                                                             securityManager,
-                                                                                                            AuthenticationPredicates::IS_AUTHENTICATED)
+                                                                                                            AuthenticationPredicates::IS_AUTHENTICATED),
+                                                                                             _collar(collar)
 {
+    _server = server;
+    _securityManager = securityManager;
 }
 
 void AppSettingsService::begin()
 {
+
+// OPTIONS (for CORS preflight)
+#ifdef ENABLE_CORS
+        _server->on(TEST_COLLAR_ENDPOINT_PATH,
+                    HTTP_OPTIONS,
+                    _securityManager->wrapRequest(
+                        [this](PsychicRequest *request)
+                        {
+                            return request->reply(200);
+                        },
+                        AuthenticationPredicates::IS_AUTHENTICATED));
+#endif
+    _server->on(TEST_COLLAR_ENDPOINT_PATH,
+        HTTP_POST,
+        _securityManager->wrapCallback(
+            [this](PsychicRequest *request, JsonVariant &json)
+            {
+                if (!json.is<JsonObject>())
+                {
+                    return request->reply(400);
+                }
+
+                std::map<String, ActionType> actionMap = {
+                    {"shock", ActionType::SHOCK},
+                    {"vibration", ActionType::VIBRATION},
+                    {"beep", ActionType::BEEP}
+                };
+
+                JsonObject jsonObject = json.as<JsonObject>();
+                PsychicJsonResponse response = PsychicJsonResponse(request, false, DEFAULT_BUFFER_SIZE);
+                JsonObject responseObject = response.getRoot();
+                String type = jsonObject["type"].as<String>();
+                ActionType action = actionMap.count(type) > 0 ? actionMap[type] : ActionType::UNKNOWN;
+                int value = jsonObject["value"].as<int>();
+                int duration = jsonObject["duration"].as<int>();
+
+                switch (action)
+                {
+                    case ActionType::SHOCK:
+                        _collar->sendShock(value, duration);
+                        responseObject["res"] = "ok";
+                        break;
+                    case ActionType::VIBRATION:
+                        _collar->sendVibration(value, duration);
+                        responseObject["res"] = "ok";
+                        break;
+                    case ActionType::BEEP:
+                        _collar->sendAudio(0, duration);
+                        responseObject["res"] = "ok";
+                        break;
+                    default:
+                        return request->reply(400);
+                }
+
+                return response.send();
+            },
+            AuthenticationPredicates::IS_AUTHENTICATED
+        )
+    );
+
     _httpEndpoint.begin();
     _webSocketServer.begin();
     _fsPersistence.readFromFS();

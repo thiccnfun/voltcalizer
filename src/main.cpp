@@ -12,24 +12,30 @@
  *   the terms of the LGPL v3 license. See the LICENSE file for details.
  **/
 
+#include <ZapMe.h>
 #include <ESP32SvelteKit.h>
 #include <AppSettingsService.h>
 #include <MicStateService.h>
 // #include <PsychicHttpServer.h>
+
+#define RF_PIN            21
 
 // -------------
 PsychicHttpServer server;
 
 ESP32SvelteKit esp32sveltekit(&server, 115);
 
+CH8803 collar = CH8803(RF_PIN, 0);
+
 AppSettingsService appSettingsService =
-    AppSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager());
+    AppSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager(), &collar);
 
 MicStateService micStateService = MicStateService(&server,
                                                         esp32sveltekit.getSecurityManager(),
                                                         esp32sveltekit.getMqttClient(),
                                                         &appSettingsService,
-                                                        esp32sveltekit.getNotificationEvents());
+                                                        esp32sveltekit.getNotificationEvents(),
+                                                        &collar);
 
 
 
@@ -40,7 +46,8 @@ void setup()
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
 
-  
+  // set output pins for collar RF
+  pinMode(RF_PIN, OUTPUT);
 
 
 
