@@ -216,7 +216,6 @@ class DogTronic : public ZapMe {
     uint16_t mMaxTransmitTimings;
 };
 
-#endif
 
 class PaiPaitek : public ZapMe {
   /*
@@ -280,3 +279,5 @@ class PaiPaitek : public ZapMe {
     uint16_t* mTransmitTimings;
     uint16_t mMaxTransmitTimings;
 };
+
+#endif
