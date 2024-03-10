@@ -266,8 +266,8 @@
 			</div>
 		</div>
 
-		<div class="mt-6 place-self-end">
-			<button class="btn btn-warning" on:click={() => testCollarModalOpen = true}>
+		<div class="mt-6 flex">
+			<button class="btn btn-warning mr-auto" on:click={() => testCollarModalOpen = true}>
 				Test Collar
 			</button>
 			<button class="btn btn-primary" type="submit">
