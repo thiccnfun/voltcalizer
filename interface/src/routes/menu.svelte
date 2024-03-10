@@ -10,7 +10,7 @@
 	import Router from '~icons/tabler/router';
 	import AP from '~icons/tabler/access-point';
 	import Remote from '~icons/tabler/network';
-	import Control from '~icons/tabler/adjustments';
+	import AdjustmentsHor from '~icons/tabler/adjustments-horizontal';
 	import Avatar from '~icons/tabler/user-circle';
 	import Logout from '~icons/tabler/logout';
 	import Copyright from '~icons/tabler/copyright';
@@ -58,7 +58,7 @@
 		},
 		{
 			title: 'Configuration',
-			icon: Control,
+			icon: AdjustmentsHor,
 			href: '/configuration',
 			feature: true,
 			active: false
