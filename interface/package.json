@@ -16,6 +16,7 @@
 		"@sveltejs/adapter-auto": "^2.1.0",
 		"@sveltejs/adapter-static": "^2.0.3",
 		"@sveltejs/kit": "^1.22.4",
+		"@types/svelte-range-slider-pips": "^2.0.4",
 		"@typescript-eslint/eslint-plugin": "^6.2.1",
 		"@typescript-eslint/parser": "^6.2.1",
 		"autoprefixer": "^10.4.14",
