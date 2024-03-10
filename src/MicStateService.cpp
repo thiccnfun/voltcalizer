@@ -267,51 +267,37 @@ float samples[SAMPLES_SHORT] __attribute__((aligned(4)));
 
 
 
-MicStateService::MicStateService(PsychicHttpServer *server,
-                                     SecurityManager *securityManager,
-                                     PsychicMqttClient *mqttClient,
-                                     AppSettingsService *appSettingsService,
-                                     NotificationEvents *notificationEvents) : _httpEndpoint(MicState::read,
-                                                                                                         MicState::update,
-                                                                                                         this,
-                                                                                                         server,
-                                                                                                         MIC_STATE_ENDPOINT_PATH,
-                                                                                                         securityManager,
-                                                                                                         AuthenticationPredicates::IS_AUTHENTICATED),
-                                                                                           _mqttPubSub(MicState::read, MicState::update, this, mqttClient),
-                                                                                           _webSocketServer(MicState::read,
-                                                                                                            MicState::update,
-                                                                                                            this,
-                                                                                                            server,
-                                                                                                            MIC_STATE_SOCKET_PATH,
-                                                                                                            securityManager,
-                                                                                                            AuthenticationPredicates::IS_AUTHENTICATED),
-                                                                                           _mqttClient(mqttClient),
-                                                                                           _appSettingsService(appSettingsService),
-                                                                                           _notificationEvents(notificationEvents),
-                                                                                          collar(RF_PIN, 0)
-/*  _webSocketClient(LightState::read,
-                   LightState::update,
-                   this,
-                   LIGHT_SETTINGS_SOCKET_PATH)*/
+MicStateService::MicStateService(
+  PsychicHttpServer *server,
+  SecurityManager *securityManager,
+  PsychicMqttClient *mqttClient,
+  AppSettingsService *appSettingsService,
+  NotificationEvents *notificationEvents,
+  CH8803 *collar) : 
+    _httpEndpoint(
+      MicState::read,
+      MicState::update,
+      this,
+      server,
+      MIC_STATE_ENDPOINT_PATH,
+      securityManager,
+      AuthenticationPredicates::IS_AUTHENTICATED
+    ),
+    _mqttPubSub(MicState::read, MicState::update, this, mqttClient),
+    _webSocketServer(
+      MicState::read,
+      MicState::update,
+      this,
+      server,
+      MIC_STATE_SOCKET_PATH,
+      securityManager,
+      AuthenticationPredicates::IS_AUTHENTICATED
+    ),
+    _mqttClient(mqttClient),
+    _appSettingsService(appSettingsService),
+    _notificationEvents(notificationEvents),
+    _collar(collar)
 {
-    // configure led to be output
-    // pinMode(LED_BUILTIN, OUTPUT);
-
-    // configure MQTT callback
-    // _mqttClient->onConnect(std::bind(&LightStateService::registerConfig, this));
-
-    // // configure update handler for when the light settings change
-    // _lightMqttSettingsService->addUpdateHandler([&](const String &originId)
-    //                                             { registerConfig(); },
-    //                                             false);
-
-    // configure settings service update handler to update LED state
-    // addUpdateHandler([&](const String &originId)
-    //                  { onConfigUpdated(); },
-    //                  false);
-
-    pinMode(RF_PIN, OUTPUT);
 }
 
 void MicStateService::begin()
@@ -329,48 +315,17 @@ void MicStateService::onConfigUpdated()
     // digitalWrite(LED_BUILTIN, _state.ledOn ? 1 : 0);
 }
 
-// void LightStateService::registerConfig()
-// {
-//     if (!_mqttClient->connected())
-//     {
-//         return;
-//     }
-//     String configTopic;
-//     String subTopic;
-//     String pubTopic;
-
-//     DynamicJsonDocument doc(256);
-//     _lightMqttSettingsService->read([&](LightMqttSettings &settings)
-//                                     {
-//     configTopic = settings.mqttPath + "/config";
-//     subTopic = settings.mqttPath + "/set";
-//     pubTopic = settings.mqttPath + "/state";
-//     doc["~"] = settings.mqttPath;
-//     doc["name"] = settings.name;
-//     doc["unique_id"] = settings.uniqueId; });
-//     doc["cmd_t"] = "~/set";
-//     doc["stat_t"] = "~/state";
-//     doc["schema"] = "json";
-//     doc["brightness"] = false;
-
-//     String payload;
-//     serializeJson(doc, payload);
-//     _mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
-
-//     _mqttPubSub.configureTopics(pubTopic, subTopic);
-// }
-
 void MicStateService::setupCollar() {
    // TODO: make this configurable
-  collar.setId(13, 37);
+  _collar->setId(13, 37);
 }
 
 void MicStateService::vibrateCollar(int strength, int duration) {
-  collar.sendVibration(strength, duration);
+  _collar->sendVibration(strength, duration);
 }
 
 void MicStateService::beepCollar(int duration) {
-  collar.sendAudio(0, duration);
+  _collar->sendAudio(0, duration);
 }
 
 void MicStateService::setupReader() {
@@ -452,11 +407,11 @@ void MicStateService::setupReader() {
             
             eventCountdown = sequenceDuration - elapsedTime + idleDuration;
             
-            if (eventCountdown <= 0) {
+            if (_state.enabled && eventCountdown <= 0) {
                 if (conditionEvaluation == CONDITIONS_REACHED) {
-                    handleAffirm();
+                    handleAffirmation();
                 } else if (conditionEvaluation == CONDITIONS_NOT_REACHED) {
-                    handleDeny();
+                    handleCorrection();
                 }
 
                 // NOTE: maybe delay accordingly
@@ -467,7 +422,7 @@ void MicStateService::setupReader() {
                 eventCountdown = eventCountdown;
                 conditionEvaluation = 0;
 
-            } else if (eventCountdown <= actDuration) {
+            } else if (_state.enabled && eventCountdown <= actDuration) {
                 Serial.println("--------- ACTION WINDOW --------------");
 
                 // if the sample has not reached the threshold, evaluate it
@@ -497,11 +452,11 @@ int MicStateService::evaluateConditions(double currentDb) {
   return CONDITIONS_NOT_REACHED;
 }
 
-void MicStateService::handleAffirm() {
+void MicStateService::handleAffirmation() {
  Serial.println("==========REWARD==========");
 }
 
-void MicStateService::handleDeny() {
+void MicStateService::handleCorrection() {
   // TODO: get settings for punishment
 
   vibrateCollar(50, 1000);
@@ -597,7 +552,7 @@ void MicStateService::readerTask() {
         q.pitch = calculatePitch(samples, SAMPLE_RATE);
 
         // analogRead PIEZO_PIN
-        Serial.println(analogRead(PIEZO_PIN));
+        // Serial.println(analogRead(PIEZO_PIN));
 
         // Send the sums to FreeRTOS queue where main task will pick them up
         // and further calcualte decibel values (division, logarithms, etc...)

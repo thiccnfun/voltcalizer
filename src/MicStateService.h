@@ -54,6 +54,8 @@ public:
     int actDuration = 0;
     int collarId = 0;
 
+    bool enabled = false;
+
     static void read(MicState &settings, JsonObject &root)
     {
         root["dbt"] = settings.dbThreshold;
@@ -62,16 +64,16 @@ public:
         root["acd"] = settings.actDuration;
         root["pv"] = settings.pitchValue;
         root["pt"] = settings.pitchThreshold;
+        root["en"] = settings.enabled;
     }
 
-    static StateUpdateResult update(JsonObject &root, MicState &lightState)
+    static StateUpdateResult update(JsonObject &root, MicState &micState)
     {
-        // boolean newState = root["led_on"] | DEFAULT_LED_STATE;
-        // if (lightState.ledOn != newState)
-        // {
-        //     lightState.ledOn = newState;
-        //     return StateUpdateResult::CHANGED;
-        // }
+        boolean newEnabled = root["en"] | micState.enabled;
+        if (micState.enabled != newEnabled) {
+            micState.enabled = newEnabled;
+            return StateUpdateResult::CHANGED;
+        }
         return StateUpdateResult::UNCHANGED;
     }
 };
@@ -83,7 +85,8 @@ public:
                       SecurityManager *securityManager,
                       PsychicMqttClient *mqttClient,
                       AppSettingsService *appSettingsService,
-                      NotificationEvents *notificationEvents);
+                      NotificationEvents *notificationEvents,
+                      CH8803 *collar);
     void begin();
     void setupReader();
     void setupCollar();
@@ -103,8 +106,8 @@ protected:
         double &dbThreshold
     );
     int evaluateConditions(double currentDb);
-    void handleAffirm();
-    void handleDeny();
+    void handleAffirmation();
+    void handleCorrection();
 
 private:
     HttpEndpoint<MicState> _httpEndpoint;
@@ -114,12 +117,12 @@ private:
     PsychicMqttClient *_mqttClient;
     AppSettingsService *_appSettingsService;
     NotificationEvents *_notificationEvents;
+    CH8803 *_collar;
 
     QueueHandle_t samplesQueue;
     arduinoFFT fft;
     double vReal[SAMPLES_SHORT];
     double vImag[SAMPLES_SHORT];
-    CH8803 collar;
 
     void registerConfig();
     void onConfigUpdated();
