@@ -99,7 +99,6 @@ protected:
     static void _readerTask(void *_this) { static_cast<MicStateService *>(_this)->readerTask(); }
     void assignDurationValues(
         int &idleDuration,
-        int &eventDuration,
         int &actDuration
     );
     void assignConditionValues(

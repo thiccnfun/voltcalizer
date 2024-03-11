@@ -359,13 +359,13 @@ void MicStateService::setupReader() {
 
     // 5 seconds in milliseconds
     int idleDuration = 5000; // how long to wait before starting the sequence
-    int eventDuration = 5000; // how long until the event ends
-    int actDuration = 2000; // how long the user has to act before the event ends
+    // int eventDuration = 5000; // how long until the event ends
+    int actDuration = 4000; // how long the user has to act before the event ends
     // int actWindow = 2000;
 
-    assignDurationValues(idleDuration, eventDuration, actDuration);
-    int sequenceDuration = eventDuration + actDuration;
-    int eventCountdown = sequenceDuration;
+    assignDurationValues(idleDuration, actDuration);
+    int sequenceDuration = actDuration;
+    int eventCountdown = actDuration;
 
 
     unsigned long currentTime = millis();
@@ -407,28 +407,35 @@ void MicStateService::setupReader() {
             
             eventCountdown = sequenceDuration - elapsedTime + idleDuration;
             
-            if (_state.enabled && eventCountdown <= 0) {
-                if (conditionEvaluation == CONDITIONS_REACHED) {
-                    handleAffirmation();
-                } else if (conditionEvaluation == CONDITIONS_NOT_REACHED) {
-                    handleCorrection();
-                }
+            if (_state.enabled) {
+              if (eventCountdown <= 0) {
+                  if (conditionEvaluation == CONDITIONS_REACHED) {
+                      handleAffirmation();
+                  } else if (conditionEvaluation == CONDITIONS_NOT_REACHED) {
+                      handleCorrection();
+                  }
 
-                // NOTE: maybe delay accordingly
+                  // NOTE: maybe delay accordingly
+                  startTime = currentTime;
+
+                  assignDurationValues(idleDuration, actDuration);
+                  sequenceDuration = actDuration;
+                  eventCountdown = eventCountdown;
+                  conditionEvaluation = CONDITIONS_NOT_EVALUATED;
+
+              } else if (eventCountdown <= actDuration) {
+                  Serial.println("--------- ACTION WINDOW --------------");
+
+                  // if the sample has not reached the threshold, evaluate it
+                  if (conditionEvaluation < CONDITIONS_REACHED) {
+                      conditionEvaluation = evaluateConditions(Leq_dB);
+                  }
+              }
+            } else {
+                conditionEvaluation = CONDITIONS_NOT_EVALUATED;
+                // sequenceDuration = eventDuration + actDuration;
                 startTime = currentTime;
 
-                assignDurationValues(idleDuration, eventDuration, actDuration);
-                sequenceDuration = eventDuration + actDuration;
-                eventCountdown = eventCountdown;
-                conditionEvaluation = 0;
-
-            } else if (_state.enabled && eventCountdown <= actDuration) {
-                Serial.println("--------- ACTION WINDOW --------------");
-
-                // if the sample has not reached the threshold, evaluate it
-                if (conditionEvaluation < CONDITIONS_REACHED) {
-                    conditionEvaluation = evaluateConditions(Leq_dB);
-                }
             }
 
             // Update the state, emitting change event if value changed
@@ -739,10 +746,16 @@ void MicStateService::updateDbValue(float dbValue, float pitchValue, unsigned lo
 
 void MicStateService::assignDurationValues(
     int &idleDuration,
-    int &eventDuration,
     int &actDuration
 ) {
     _appSettingsService->read([&](AppSettings &settings) {
+      if (settings.actionPeriodMaxMs == settings.actionPeriodMinMs) {
+        // idleDuration = settings.actionPeriodMinMs;
+        // eventDuration = settings.actionPeriodMinMs;
+      } else {
+        // idleDuration = settings.actionPeriodMinMs;
+        // eventDuration = settings.actionPeriodMaxMs;
+      }
         // actDuration = settings.actionPeriodMinMs;
         // actWindow = settings.actionPeriodMaxMs;
         // eventCountdown = Duration;
