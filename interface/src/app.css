@@ -31,7 +31,7 @@
 .rangeSlider .rangeBar {
   height: 1.4em;
   top: .25em;
-  translate:  0 -50%;
+  /* translate:  0 -50%; */
 }
 
 .rangeSlider.range .rangeBar {

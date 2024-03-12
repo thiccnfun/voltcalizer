@@ -23,14 +23,18 @@
 		dbt: number; // decibel threshold
 		dbv: number; // decibel value
 		ecd: number; // event count down
+		en: boolean; // enabled evaluation
+		dpr: number; // decibel pass rate
 	};
 
-	let micState: MicState = { dbt: 90, dbv: 0, ecd: Infinity };
+	let micState: MicState = { dbt: 80, dbv: 0, ecd: Infinity, dpr: 0, en: false };
 	let ecdMax = Infinity;
 	const ecdProgress = tweened(0, {
 		duration: 400,
 		easing: cubicOut
 	});
+
+	const easing = (t: number) => t;
 
 	// async function getLightstate() {
 	// 	try {
@@ -51,13 +55,13 @@
 
 	const ws_token = $page.data.features.security ? '?access_token=' + $user.bearer_token : '';
 
-	const lightStateSocket = new WebSocket('ws://' + $page.url.host + '/ws/micState' + ws_token);
+	const micStateSocket = new WebSocket('ws://' + $page.url.host + '/ws/micState' + ws_token);
 
-	lightStateSocket.onopen = (event) => {
-		lightStateSocket.send('Hello');
+	micStateSocket.onopen = (event) => {
+		micStateSocket.send('Hello');
 	};
 
-	lightStateSocket.addEventListener('close', (event) => {
+	micStateSocket.addEventListener('close', (event) => {
 		const closeCode = event.code;
 		const closeReason = event.reason;
 		console.log('WebSocket closed with code:', closeCode);
@@ -65,21 +69,28 @@
 		notifications.error('Websocket disconnected', 5000);
 	});
 
-	lightStateSocket.onmessage = (event) => {
+	micStateSocket.onmessage = (event) => {
 		const message = JSON.parse(event.data);
 		if (message.type != 'id') {
-			micState = message;
-
-			if (micState.ecd > ecdMax || ecdMax === Infinity) {
-				ecdMax = micState.ecd;
+			if (message.ecd > ecdMax || ecdMax === Infinity) {
+				ecdMax = message.ecd;
+			} 
+			if (message.ecd <= 0) {
+				ecdMax = Infinity;
 				ecdProgress.set(0);
-			} else {
-				ecdProgress.set(1 - micState.ecd / ecdMax);
+			} else if (message.ecd > micState.ecd) {
+				ecdProgress.set(1, { duration: message.ecd, easing });
 			}
+			micState = message;
 		}
 	};
 
-	onDestroy(() => lightStateSocket.close());
+	onDestroy(() => micStateSocket.close());
+
+
+	function toggleEvaluator () {
+		micStateSocket.send(JSON.stringify({ en: !micState.en }));
+	}
 
 	// chart
 
@@ -188,10 +199,13 @@
 			}
 		});
 
-		setInterval(() => {
-			updateData(), 500;
-		});
+		loop();
 	});
+
+	function loop () {
+		updateData();
+		requestAnimationFrame(loop);
+	};
 
 	function updateData() {
 		stateHistory.push({
@@ -210,7 +224,13 @@
 		// );
 		heapChart.data.labels = heapChart.data.labels.slice(Math.max(heapChart.data.labels.length - 500, 0));
 		heapChart.data.datasets[0].data = stateHistory;
-		heapChart.data.datasets[1].data = stateHistory;
+		heapChart.data.datasets[1].data = micState.en ? stateHistory : [];
+
+		
+		// if (stateHistory[stateHistory.length - 1].dpr > 0) {
+		// 	console.log('-------------', stateHistory[stateHistory.length - 1]);
+		// 	heapChart.data.datasets[1].backgroundColor = `rgba(0,255,0,0.5)`
+		// }
 
 
 		// console.log('dbData:', heapChart.data.datasets[0].data);
@@ -285,12 +305,29 @@
 		>
 			<canvas bind:this={heapChartElement} />
 		</div>
-		{#if ecdMax !== Infinity}
-			<progress 
-				class="progress w-56 {micState.ecd === 0 ? 'progress-error blink' : ''}" 
-				value={$ecdProgress} 
-			/>
-		{/if}
+		<progress 
+			class="
+				progress w-100 
+				{
+					(ecdMax !== Infinity && (micState.ecd / ecdMax < 0.33)) ? 
+					'progress-error blink' : 
+					(ecdMax !== Infinity && (micState.ecd / ecdMax < 0.66)) ?
+					'progress-warning' 
+					: ''
+				}" 
+			value={$ecdProgress} 
+		/>
+		<div class="mt-6 flex">
+			{#if micState.en}
+				<button class="btn btn-primary" type="submit" on:click={toggleEvaluator}>
+					Stop Evaluating
+				</button>
+			{:else}
+				<button class="btn btn-primary" type="submit" on:click={toggleEvaluator}>
+					Start Evaluating
+				</button>
+			{/if}
 
+		</div>
 	</div>
 </SettingsCard>

@@ -52,6 +52,10 @@
 	let testCollarModalOpen = false;
 	let shockRanges = [appSettings.collar_min_shock, appSettings.collar_max_shock];
 	let vibeRanges = [appSettings.collar_min_vibe, appSettings.collar_max_vibe];
+	let idleRanges = [appSettings.idle_period_min_ms / 1000, appSettings.idle_period_max_ms / 1000];
+	let actionRanges = [appSettings.action_period_min_ms / 1000, appSettings.action_period_max_ms / 1000];
+	let loudnessRanges = [appSettings.decibel_threshold_min, appSettings.decibel_threshold_max];
+	let micSensitivity = [appSettings.mic_sensitivity];
 
 	// async function getAppSettings() {
 	// 	try {
@@ -94,6 +98,10 @@
 			appSettings = message;
 
 			shockRanges = [appSettings.collar_min_shock, appSettings.collar_max_shock];
+			vibeRanges = [appSettings.collar_min_vibe, appSettings.collar_max_vibe];
+			idleRanges = [appSettings.idle_period_min_ms / 1000, appSettings.idle_period_max_ms / 1000];
+			actionRanges = [appSettings.action_period_min_ms / 1000, appSettings.action_period_max_ms / 1000];
+			loudnessRanges = [appSettings.decibel_threshold_min, appSettings.decibel_threshold_max];
 
 			// if (micState.ecd > ecdMax || ecdMax === Infinity) {
 			// 	ecdMax = micState.ecd;
@@ -127,14 +135,14 @@
 		} = Object.fromEntries(fd.entries());
 
 		const newSettings: AppSettings = {
-			idle_period_max_ms: Number(formObject.idle_period_max_ms) * 1000,
-			idle_period_min_ms: Number(formObject.idle_period_min_ms) * 1000,
-			action_period_max_ms: Number(formObject.action_period_max_ms) * 1000,
-			action_period_min_ms: Number(formObject.action_period_min_ms) * 1000,
-			decibel_threshold_max: Number(formObject.decibel_threshold_max),
-			decibel_threshold_min: Number(formObject.decibel_threshold_min),
 			mic_sensitivity: !!mic_sensitivity_26 ? 26 : !!mic_sensitivity_27 ? 27 : !!mic_sensitivity_28 ? 28 : 29,
-
+			
+			decibel_threshold_min: loudnessRanges[0],
+			decibel_threshold_max: loudnessRanges[1],
+			action_period_min_ms: actionRanges[0] * 1000,
+			action_period_max_ms: actionRanges[1] * 1000,
+			idle_period_min_ms: idleRanges[0] * 1000,
+			idle_period_max_ms: idleRanges[1] * 1000,
 			collar_min_shock: shockRanges[0],
 			collar_max_shock: shockRanges[1],
 			collar_min_vibe: vibeRanges[0],
@@ -142,6 +150,10 @@
 		};
 
 		updateSettings(newSettings);
+	}
+
+	function sensitivityFormatter(value: number) {
+		return value < 28 ? 'Less' : 'More';
 	}
 
 	onMount(() => {
@@ -175,23 +187,13 @@
                     <label class="label">
                         <span class="label-text">Idle Duration (seconds)</span>
                     </label>
-                    <label class="input-group">
-                        <span>Min</span>
-                        <input name="idle_period_min_ms" type="number" placeholder="5" class="input input-bordered" value={appSettings.idle_period_min_ms / 1000} />
-                        <span>Max</span>
-                        <input name="idle_period_max_ms" type="number" placeholder="30" class="input input-bordered" value={appSettings.idle_period_max_ms / 1000} />
-                    </label>
+					<RangeSlider range pushy pips float min={1} max={300} first=label last=label bind:values={idleRanges} />
                 </div>
                 <div class="form-control">
                     <label class="label">
                         <span class="label-text">Action Period (seconds)</span>
                     </label>
-                    <label class="input-group">
-                        <span>Min</span>
-                        <input name="action_period_min_ms" type="number" placeholder="3" class="input input-bordered" value={appSettings.action_period_min_ms / 1000} />
-                        <span>Max</span>
-                        <input name="action_period_max_ms" type="number" placeholder="5" class="input input-bordered" value={appSettings.action_period_max_ms / 1000} />
-                    </label>
+					<RangeSlider range pushy pips float min={2} max={30} first=label last=label bind:values={actionRanges} />
                 </div>
 
 
@@ -209,25 +211,29 @@
                     <label class="label">
                         <span class="label-text">Loudness Threshold (dB)</span>
                     </label>
-                    <label class="input-group">
-                        <span>Min</span>
-                        <input name="decibel_threshold_min" type="number" placeholder="80" class="input input-bordered" value={appSettings.decibel_threshold_min} />
-                        <span>Max</span>
-                        <input name="decibel_threshold_max" type="number" placeholder="95" class="input input-bordered" value={appSettings.decibel_threshold_max} />
-                    </label>
+					<RangeSlider range pushy pips float min={30} max={125} first=label last=label bind:values={loudnessRanges} />
                 </div>
                 <div class="form-control">
                     <label class="label">
                         <span class="label-text">Microphone Sensitivity</span>
                     </label>
-                    <div class="rating input-group">
+					<RangeSlider 
+						pips 
+						first=label
+						last=label 
+						min={26} 
+						max={29} 
+						bind:values={micSensitivity} 
+						formatter={sensitivityFormatter}
+					/>
+                    <!-- <div class="rating input-group">
                         <span>Less</span>
                         <input type="radio" name="mic_sensitivity_26" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 26} />
                         <input type="radio" name="mic_sensitivity_27" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 27} />
                         <input type="radio" name="mic_sensitivity_28" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 28} />
                         <input type="radio" name="mic_sensitivity_29" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 29} />
                         <span>More</span>
-                    </div>
+                    </div> -->
                 </div>
                 <div class="form-control">
                     <label class="label">
