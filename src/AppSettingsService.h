@@ -19,10 +19,14 @@
 #include <WebSocketServer.h>
 #include <FSPersistence.h>
 // #include <SettingValue.h>
+#include <ZapMe.h>
 
 #define APP_SETTINGS_FILE "/config/appSettings.json"
 #define APP_SETTINGS_ENDPOINT_PATH "/rest/appSettings"
+#define TEST_COLLAR_ENDPOINT_PATH "/rest/testCollar"
 #define APP_SETTINGS_SOCKET_PATH "/ws/appSettings"
+
+enum class ActionType { SHOCK, VIBRATION, BEEP, UNKNOWN };
 
 class AppSettings
 {
@@ -31,9 +35,16 @@ public:
     int idlePeriodMaxMs = 1000 * 10;
     int actionPeriodMinMs = 1000;
     int actionPeriodMaxMs = 1000;
+    
     int decibelThresholdMin = 80;
     int decibelThresholdMax = 80;
     int micSensitivity = 26; // 26-29 per the datasheet
+
+    int collarMinShock = 5;
+    int collarMaxShock = 75;
+    int collarMinVibe = 5;
+    int collarMaxVibe = 100;
+
 
     static void read(AppSettings &settings, JsonObject &root)
     {
@@ -44,6 +55,10 @@ public:
         root["decibel_threshold_min"] = settings.decibelThresholdMin;
         root["decibel_threshold_max"] = settings.decibelThresholdMax;
         root["mic_sensitivity"] = settings.micSensitivity;
+        root["collar_min_shock"] = settings.collarMinShock;
+        root["collar_max_shock"] = settings.collarMaxShock;
+        root["collar_min_vibe"] = settings.collarMinVibe;
+        root["collar_max_vibe"] = settings.collarMaxVibe;
     }
 
     static StateUpdateResult update(JsonObject &root, AppSettings &settings)
@@ -55,6 +70,10 @@ public:
         settings.decibelThresholdMin = root["decibel_threshold_min"] | settings.decibelThresholdMin;
         settings.decibelThresholdMax = root["decibel_threshold_max"] | settings.decibelThresholdMax;
         settings.micSensitivity = root["mic_sensitivity"] | settings.micSensitivity;
+        settings.collarMinShock = root["collar_min_shock"] | settings.collarMinShock;
+        settings.collarMaxShock = root["collar_max_shock"] | settings.collarMaxShock;
+        settings.collarMinVibe = root["collar_min_vibe"] | settings.collarMinVibe;
+        settings.collarMaxVibe = root["collar_max_vibe"] | settings.collarMaxVibe;
         return StateUpdateResult::CHANGED;
     }
 };
@@ -62,13 +81,16 @@ public:
 class AppSettingsService : public StatefulService<AppSettings>
 {
 public:
-    AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager);
+    AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager, CH8803 *collar);
     void begin();
 
 private:
     HttpEndpoint<AppSettings> _httpEndpoint;
     FSPersistence<AppSettings> _fsPersistence;
     WebSocketServer<AppSettings> _webSocketServer;
+    SecurityManager *_securityManager;
+    PsychicHttpServer *_server;
+    CH8803 *_collar;
 };
 
 #endif // end AppSettingsService_h
