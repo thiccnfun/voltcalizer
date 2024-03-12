@@ -104,7 +104,7 @@ protected:
     void assignConditionValues(
         double &dbThreshold
     );
-    int evaluateConditions(double currentDb);
+    int evaluateConditions(double currentDb, int thresholdDb);
     void handleAffirmation();
     void handleCorrection();
 
@@ -125,7 +125,12 @@ private:
 
     void registerConfig();
     void onConfigUpdated();
-    void updateDbValue(float dbValue, float pitchValue, unsigned long actCountdown);
+    void updateState(
+        float dbValue, 
+        float pitchValue, 
+        int actCountdown,
+        int thresholdDb
+    );
     float calculatePitch(float samples[], int sampleRate);
     void printVector(double *vData, uint16_t bufferSize, uint8_t scaleType);
     // void fft(const std::vector<std::complex<float>>& input, std::vector<std::complex<float>>& output);

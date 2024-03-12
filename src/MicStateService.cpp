@@ -362,7 +362,9 @@ void MicStateService::setupReader() {
     // int eventDuration = 5000; // how long until the event ends
     int actDuration = 4000; // how long the user has to act before the event ends
     // int actWindow = 2000;
+    double thresholdDb = 80;
 
+    assignConditionValues(thresholdDb);
     assignDurationValues(idleDuration, actDuration);
     int sequenceDuration = actDuration;
     int eventCountdown = actDuration;
@@ -372,6 +374,9 @@ void MicStateService::setupReader() {
     unsigned long elapsedTime = currentTime - startTime;
 
     int conditionEvaluation = CONDITIONS_NOT_EVALUATED;
+    bool resetConditions = false;
+    int ticks = 0;
+    int ticksPassed = 0;
 
     // Read sum of samaples, calculated by 'i2s_reader_task'
     while (xQueueReceive(samplesQueue, &q, portMAX_DELAY)) {
@@ -415,31 +420,47 @@ void MicStateService::setupReader() {
                       handleCorrection();
                   }
 
-                  // NOTE: maybe delay accordingly
-                  startTime = currentTime;
-
-                  assignDurationValues(idleDuration, actDuration);
-                  sequenceDuration = actDuration;
-                  eventCountdown = eventCountdown;
-                  conditionEvaluation = CONDITIONS_NOT_EVALUATED;
-
+                  resetConditions = true;
               } else if (eventCountdown <= actDuration) {
                   Serial.println("--------- ACTION WINDOW --------------");
 
                   // if the sample has not reached the threshold, evaluate it
                   if (conditionEvaluation < CONDITIONS_REACHED) {
-                      conditionEvaluation = evaluateConditions(Leq_dB);
+                      conditionEvaluation = evaluateConditions(Leq_dB, thresholdDb);
                   }
+
+                  ticks += 1;
               }
             } else {
                 conditionEvaluation = CONDITIONS_NOT_EVALUATED;
                 // sequenceDuration = eventDuration + actDuration;
                 startTime = currentTime;
-
             }
 
             // Update the state, emitting change event if value changed
-            updateDbValue(Leq_dB, q.pitch, elapsedTime <= idleDuration ? -1 : eventCountdown);
+            updateState(
+              Leq_dB, 
+              q.pitch, 
+              elapsedTime <= idleDuration ? -1 : eventCountdown,
+              thresholdDb
+            );
+
+            if (resetConditions) {
+
+                // NOTE: maybe delay accordingly
+                startTime = currentTime;
+
+                assignConditionValues(thresholdDb);
+                assignDurationValues(idleDuration, actDuration);
+                sequenceDuration = actDuration;
+                conditionEvaluation = CONDITIONS_NOT_EVALUATED;
+                resetConditions = false;
+                ticks = 0;
+                ticksPassed = 0;
+            }
+
+
+
         }
     
         // Debug only
@@ -447,9 +468,7 @@ void MicStateService::setupReader() {
     }
 }
 
-int MicStateService::evaluateConditions(double currentDb) {
-  double thresholdDb = 80;
-  assignConditionValues(thresholdDb);
+int MicStateService::evaluateConditions(double currentDb, int thresholdDb) {
 
   // TODO: different evaluation methods
   if (currentDb >= thresholdDb) {
@@ -730,15 +749,19 @@ void MicStateService::printVector(double *vData, uint16_t bufferSize, uint8_t sc
 //     }
 // }
 
-void MicStateService::updateDbValue(float dbValue, float pitchValue, unsigned long eventCountdown)
-{
+void MicStateService::updateState(
+  float dbValue, 
+  float pitchValue, 
+  int eventCountdown,
+  int thresholdDb
+) {
   update([&](MicState& state) {
     if (state.dbValue == dbValue && state.eventCountdown == eventCountdown) {
       return StateUpdateResult::UNCHANGED;
     }
     state.dbValue = dbValue;
     state.eventCountdown = eventCountdown;
-    state.dbThreshold = eventCountdown == -1 ? 0 : 70;
+    state.dbThreshold = eventCountdown == -1 ? 0 : thresholdDb;
     state.pitchValue = pitchValue;
     return StateUpdateResult::CHANGED;
   }, "db_set");
@@ -750,17 +773,16 @@ void MicStateService::assignDurationValues(
 ) {
     _appSettingsService->read([&](AppSettings &settings) {
       if (settings.actionPeriodMaxMs == settings.actionPeriodMinMs) {
-        // idleDuration = settings.actionPeriodMinMs;
-        // eventDuration = settings.actionPeriodMinMs;
+        actDuration = settings.actionPeriodMinMs;
       } else {
-        // idleDuration = settings.actionPeriodMinMs;
-        // eventDuration = settings.actionPeriodMaxMs;
+        actDuration = random(settings.actionPeriodMinMs, settings.actionPeriodMaxMs);
       }
-        // actDuration = settings.actionPeriodMinMs;
-        // actWindow = settings.actionPeriodMaxMs;
-        // eventCountdown = Duration;
 
-        // TODO: assign values from settings
+      if (settings.idlePeriodMaxMs == settings.idlePeriodMinMs) {
+        idleDuration = settings.idlePeriodMinMs;
+      } else {
+        idleDuration = random(settings.idlePeriodMinMs, settings.idlePeriodMaxMs);
+      }
     });
 }
 
@@ -768,6 +790,10 @@ void MicStateService::assignConditionValues(
     double &dbThreshold
 ) {
     _appSettingsService->read([&](AppSettings &settings) {
-        dbThreshold = settings.decibelThresholdMin;
+        if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
+          dbThreshold = settings.decibelThresholdMin;
+        } else {
+          dbThreshold = random(settings.decibelThresholdMin, settings.decibelThresholdMax);
+        }
     });
 }
