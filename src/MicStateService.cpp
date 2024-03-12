@@ -366,17 +366,18 @@ void MicStateService::setupReader() {
 
     assignConditionValues(thresholdDb);
     assignDurationValues(idleDuration, actDuration);
-    int sequenceDuration = actDuration;
+    // int sequenceDuration = actDuration;
     int eventCountdown = actDuration;
-
 
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - startTime;
 
-    int conditionEvaluation = CONDITIONS_NOT_EVALUATED;
     bool resetConditions = false;
     int ticks = 0;
     int ticksPassed = 0;
+    bool stopOnPass = true;
+    bool doEvaluation = false;
+    float passRate = 1;
 
     // Read sum of samaples, calculated by 'i2s_reader_task'
     while (xQueueReceive(samplesQueue, &q, portMAX_DELAY)) {
@@ -410,30 +411,35 @@ void MicStateService::setupReader() {
             currentTime = millis();
             elapsedTime = currentTime - startTime;
             
-            eventCountdown = sequenceDuration - elapsedTime + idleDuration;
+            eventCountdown = actDuration - elapsedTime + idleDuration;
             
             if (_state.enabled) {
               if (eventCountdown <= 0) {
-                  if (conditionEvaluation == CONDITIONS_REACHED) {
-                      handleAffirmation();
-                  } else if (conditionEvaluation == CONDITIONS_NOT_REACHED) {
-                      handleCorrection();
-                  }
-
-                  resetConditions = true;
+                doEvaluation = true;
+                resetConditions = true;
               } else if (eventCountdown <= actDuration) {
-                  Serial.println("--------- ACTION WINDOW --------------");
+                Serial.println("--------- ACTION WINDOW --------------");
+                ticks += 1;
 
-                  // if the sample has not reached the threshold, evaluate it
-                  if (conditionEvaluation < CONDITIONS_REACHED) {
-                      conditionEvaluation = evaluateConditions(Leq_dB, thresholdDb);
+                if (evaluateConditions(Leq_dB, thresholdDb) == CONDITIONS_REACHED) {
+                  ticksPassed += 1;
+
+                  // if setup to stop on the first pass, proceed to evaluation
+                  // otherwise, continue to accumulate ticks and evaluate at the end
+                  if (stopOnPass) {
+                    passRate = 1;
+                    doEvaluation = true;
+                    resetConditions = true;
                   }
+                }
 
-                  ticks += 1;
+                if (!doEvaluation) {
+                  passRate = (float)ticksPassed / ticks;
+                }
               }
+
+
             } else {
-                conditionEvaluation = CONDITIONS_NOT_EVALUATED;
-                // sequenceDuration = eventDuration + actDuration;
                 startTime = currentTime;
             }
 
@@ -445,22 +451,28 @@ void MicStateService::setupReader() {
               thresholdDb
             );
 
+            if (doEvaluation) {
+              doEvaluation = false;
+
+              if (evaluatePassed(passRate)) {
+                  handleAffirmation(passRate);
+              } else {
+                  handleCorrection(passRate);
+              }
+            }
+
             if (resetConditions) {
+                resetConditions = false;
 
                 // NOTE: maybe delay accordingly
                 startTime = currentTime;
 
                 assignConditionValues(thresholdDb);
                 assignDurationValues(idleDuration, actDuration);
-                sequenceDuration = actDuration;
-                conditionEvaluation = CONDITIONS_NOT_EVALUATED;
-                resetConditions = false;
+                // sequenceDuration = actDuration;
                 ticks = 0;
                 ticksPassed = 0;
             }
-
-
-
         }
     
         // Debug only
@@ -478,11 +490,17 @@ int MicStateService::evaluateConditions(double currentDb, int thresholdDb) {
   return CONDITIONS_NOT_REACHED;
 }
 
-void MicStateService::handleAffirmation() {
+bool MicStateService::evaluatePassed(float passRate) {
+
+  // TODO: different evaluation methods
+  return passRate >= 0.5;
+}
+
+void MicStateService::handleAffirmation(float passRate) {
  Serial.println("==========REWARD==========");
 }
 
-void MicStateService::handleCorrection() {
+void MicStateService::handleCorrection(float passRate) {
   // TODO: get settings for punishment
 
   vibrateCollar(50, 1000);

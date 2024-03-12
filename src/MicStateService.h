@@ -105,8 +105,9 @@ protected:
         double &dbThreshold
     );
     int evaluateConditions(double currentDb, int thresholdDb);
-    void handleAffirmation();
-    void handleCorrection();
+    bool evaluatePassed(float passRate);
+    void handleAffirmation(float passRate);
+    void handleCorrection(float passRate);
 
 private:
     HttpEndpoint<MicState> _httpEndpoint;
