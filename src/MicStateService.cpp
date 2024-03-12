@@ -377,7 +377,7 @@ void MicStateService::setupReader() {
     int ticksPassed = 0;
     bool stopOnPass = true;
     bool doEvaluation = false;
-    float passRate = 1;
+    float dbPassRate = 0;
 
     // Read sum of samaples, calculated by 'i2s_reader_task'
     while (xQueueReceive(samplesQueue, &q, portMAX_DELAY)) {
@@ -427,14 +427,14 @@ void MicStateService::setupReader() {
                   // if setup to stop on the first pass, proceed to evaluation
                   // otherwise, continue to accumulate ticks and evaluate at the end
                   if (stopOnPass) {
-                    passRate = 1;
+                    dbPassRate = 1;
                     doEvaluation = true;
                     resetConditions = true;
                   }
                 }
 
                 if (!doEvaluation) {
-                  passRate = (float)ticksPassed / ticks;
+                  dbPassRate = (float)ticksPassed / ticks;
                 }
               }
 
@@ -448,16 +448,18 @@ void MicStateService::setupReader() {
               Leq_dB, 
               q.pitch, 
               elapsedTime <= idleDuration ? -1 : eventCountdown,
-              thresholdDb
+              thresholdDb,
+              dbPassRate
             );
 
             if (doEvaluation) {
               doEvaluation = false;
 
-              if (evaluatePassed(passRate)) {
-                  handleAffirmation(passRate);
+              // NOTE: collar seems to block in these...
+              if (evaluatePassed(dbPassRate)) {
+                  handleAffirmation(dbPassRate);
               } else {
-                  handleCorrection(passRate);
+                  handleCorrection(dbPassRate);
               }
             }
 
@@ -472,6 +474,7 @@ void MicStateService::setupReader() {
                 // sequenceDuration = actDuration;
                 ticks = 0;
                 ticksPassed = 0;
+                dbPassRate = 0;
             }
         }
     
@@ -771,16 +774,18 @@ void MicStateService::updateState(
   float dbValue, 
   float pitchValue, 
   int eventCountdown,
-  int thresholdDb
+  int thresholdDb,
+  float dbPassRate
 ) {
   update([&](MicState& state) {
     if (state.dbValue == dbValue && state.eventCountdown == eventCountdown) {
       return StateUpdateResult::UNCHANGED;
     }
     state.dbValue = dbValue;
-    state.eventCountdown = eventCountdown;
     state.dbThreshold = eventCountdown == -1 ? 0 : thresholdDb;
+    state.dbPassRate = dbPassRate;
     state.pitchValue = pitchValue;
+    state.eventCountdown = eventCountdown;
     return StateUpdateResult::CHANGED;
   }, "db_set");
 }

@@ -51,8 +51,10 @@ public:
     double pitchThreshold = 0;
     double pitchValue = 0;
     int eventCountdown = 0;
-    int actDuration = 0;
-    int collarId = 0;
+    // int actDuration = 0;
+    // int collarId = 0;
+    float dbPassRate = 0;
+    float pitchPassRate = 0;
 
     bool enabled = false;
 
@@ -61,10 +63,12 @@ public:
         root["dbt"] = settings.dbThreshold;
         root["dbv"] = settings.dbValue;
         root["ecd"] = settings.eventCountdown;
-        root["acd"] = settings.actDuration;
+        // root["acd"] = settings.actDuration;
         root["pv"] = settings.pitchValue;
         root["pt"] = settings.pitchThreshold;
         root["en"] = settings.enabled;
+        root["dpr"] = settings.dbPassRate;
+        root["ppr"] = settings.pitchPassRate;
     }
 
     static StateUpdateResult update(JsonObject &root, MicState &micState)
@@ -130,7 +134,8 @@ private:
         float dbValue, 
         float pitchValue, 
         int actCountdown,
-        int thresholdDb
+        int thresholdDb,
+        float dbPassRate
     );
     float calculatePitch(float samples[], int sampleRate);
     void printVector(double *vData, uint16_t bufferSize, uint8_t scaleType);
