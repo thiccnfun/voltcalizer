@@ -20,7 +20,7 @@
 // #include <complex>
 // #include <vector>
 
-
+#include <AudioAnalysis.h>
 #include <ArduinoFFT.h>
 #include <HttpEndpoint.h>
 #include <MqttPubSub.h>
@@ -122,11 +122,15 @@ private:
     AppSettingsService *_appSettingsService;
     NotificationEvents *_notificationEvents;
     CH8803 *_collar;
+    ArduinoFFT<float> *_fft = nullptr;
+    AudioAnalysis _audioInfo;
+    float samples[SAMPLES_SHORT] __attribute__((aligned(4)));
+    int32_t* intSamples = new int32_t[SAMPLES_SHORT];
 
     QueueHandle_t samplesQueue;
-    arduinoFFT fft;
-    double vReal[SAMPLES_SHORT];
-    double vImag[SAMPLES_SHORT];
+    float _real[SAMPLES_SHORT];
+    float _imag[SAMPLES_SHORT];
+    float _weighingFactors[SAMPLES_SHORT];
 
     void registerConfig();
     void onConfigUpdated();
@@ -137,9 +141,10 @@ private:
         int thresholdDb,
         float dbPassRate
     );
-    float calculatePitch(float samples[], int sampleRate);
+    float calculatePitch();
     void printVector(double *vData, uint16_t bufferSize, uint8_t scaleType);
     // void fft(const std::vector<std::complex<float>>& input, std::vector<std::complex<float>>& output);
+    void computeFrequencies(uint8_t bandSize);
 
 };
 
