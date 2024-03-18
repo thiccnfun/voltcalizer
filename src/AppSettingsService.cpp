@@ -59,31 +59,31 @@ void AppSettingsService::begin()
                     return request->reply(400);
                 }
 
-                std::map<String, ActionType> actionMap = {
-                    {"shock", ActionType::SHOCK},
-                    {"vibration", ActionType::VIBRATION},
-                    {"beep", ActionType::BEEP}
+                std::map<String, EventType> actionMap = {
+                    {"shock", EventType::COLLAR_SHOCK},
+                    {"vibration", EventType::COLLAR_VIBRATION},
+                    {"beep", EventType::COLLAR_BEEP}
                 };
 
                 JsonObject jsonObject = json.as<JsonObject>();
                 PsychicJsonResponse response = PsychicJsonResponse(request, false, DEFAULT_BUFFER_SIZE);
                 JsonObject responseObject = response.getRoot();
                 String type = jsonObject["type"].as<String>();
-                ActionType action = actionMap.count(type) > 0 ? actionMap[type] : ActionType::UNKNOWN;
+                EventType action = actionMap.count(type) > 0 ? actionMap[type] : EventType::COLLAR_BEEP;
                 int value = jsonObject["value"].as<int>();
                 int duration = jsonObject["duration"].as<int>();
 
                 switch (action)
                 {
-                    case ActionType::SHOCK:
+                    case EventType::COLLAR_SHOCK:
                         _collar->sendShock(value, duration);
                         responseObject["res"] = "ok";
                         break;
-                    case ActionType::VIBRATION:
+                    case EventType::COLLAR_VIBRATION:
                         _collar->sendVibration(value, duration);
                         responseObject["res"] = "ok";
                         break;
-                    case ActionType::BEEP:
+                    case EventType::COLLAR_BEEP:
                         _collar->sendAudio(0, duration);
                         responseObject["res"] = "ok";
                         break;
