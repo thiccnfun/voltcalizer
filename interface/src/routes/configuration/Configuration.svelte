@@ -6,60 +6,56 @@
 	import { notifications } from '$lib/components/toasts/notifications';
 	import SettingsCard from '$lib/components/SettingsCard.svelte';
 	import AdjustmentsHor from '~icons/tabler/adjustments-horizontal';
-	// import ClockBolt from '~icons/tabler/clock-bolt';
-	// import Microphone from '~icons/tabler/microphone';
+	import Clock from '~icons/tabler/clock';
+	import Microphone from '~icons/tabler/microphone';
+	import MoodSadDizzy from '~icons/tabler/mood-sad-dizzy';
+	import MoodSmileDizzy from '~icons/tabler/mood-smile-dizzy';
+	import DeviceWatchBolt from '~icons/tabler/device-watch-bolt';
 	// import { cubicOut } from 'svelte/easing';
     import RangeSlider from 'svelte-range-slider-pips';
 	import TestCollarModal from './TestCollarModal.svelte';
+	import EventSeries from './EventSeries.svelte';
+	import type { AppSettings } from '$lib/types';
+	import { settings } from '$lib/stores/settings';
 
 	// type AppSettings = {
 	// 	led_on: boolean;
 	// };
-	type AppSettings = {
-		idle_period_min_ms: number;
-		idle_period_max_ms: number;
-		action_period_min_ms: number;
-		action_period_max_ms: number;
-		decibel_threshold_min: number;
-		decibel_threshold_max: number;
-		mic_sensitivity: 26 | 27 | 28 | 29;
 
-		collar_min_shock: number;
-		collar_max_shock: number;
-		collar_min_vibe: number;
-		collar_max_vibe: number;
-	};
 
-	let appSettings: AppSettings = {
-		idle_period_min_ms: 5000,
-		idle_period_max_ms: 30000,
-		action_period_min_ms: 3000,
-		action_period_max_ms: 5000,
-		decibel_threshold_min: 80,
-		decibel_threshold_max: 95,
-		mic_sensitivity: 27,
+	// let $settings: AppSettings = {
+	// 	idle_period_min_ms: 5000,
+	// 	idle_period_max_ms: 30000,
+	// 	action_period_min_ms: 3000,
+	// 	action_period_max_ms: 5000,
+	// 	decibel_threshold_min: 80,
+	// 	decibel_threshold_max: 95,
+	// 	mic_sensitivity: 27,
 
-		collar_min_shock: 5,
-		collar_max_shock: 75,
-		collar_min_vibe: 5,
-		collar_max_vibe: 100,
-	};
+	// 	collar_min_shock: 5,
+	// 	collar_max_shock: 75,
+	// 	collar_min_vibe: 5,
+	// 	collar_max_vibe: 100,
+
+	// 	correction_steps: [],
+	// 	affirmation_steps: [],
+	// };
 	// let ecdMax = Infinity;
 	// const ecdProgress = tweened(0, {
 	// 	duration: 400,
 	// 	easing: cubicOut
 	// });
 	let testCollarModalOpen = false;
-	let shockRanges = [appSettings.collar_min_shock, appSettings.collar_max_shock];
-	let vibeRanges = [appSettings.collar_min_vibe, appSettings.collar_max_vibe];
-	let idleRanges = [appSettings.idle_period_min_ms / 1000, appSettings.idle_period_max_ms / 1000];
-	let actionRanges = [appSettings.action_period_min_ms / 1000, appSettings.action_period_max_ms / 1000];
-	let loudnessRanges = [appSettings.decibel_threshold_min, appSettings.decibel_threshold_max];
-	let micSensitivity = [appSettings.mic_sensitivity];
+	let shockRanges = [$settings.collar_min_shock, $settings.collar_max_shock];
+	let vibeRanges = [$settings.collar_min_vibe, $settings.collar_max_vibe];
+	let idleRanges = [$settings.idle_period_min_ms / 1000, $settings.idle_period_max_ms / 1000];
+	let actionRanges = [$settings.action_period_min_ms / 1000, $settings.action_period_max_ms / 1000];
+	let loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
+	let micSensitivity = [$settings.mic_sensitivity];
 
 	// async function getAppSettings() {
 	// 	try {
-	// 		const response = await fetch('/rest/appSettings', {
+	// 		const response = await fetch('/rest/$settings', {
 	// 			method: 'GET',
 	// 			headers: {
 	// 				Authorization: $page.data.features.security ? 'Bearer ' + $user.bearer_token : 'Basic',
@@ -93,15 +89,17 @@
 	});
 
 	appSettingsSocket.onmessage = (event) => {
-		const message = JSON.parse(event.data);
+		const message = JSON.parse(event.data) as any;
 		if (message.type != 'id') {
-			appSettings = message;
+			// $settings = message;
 
-			shockRanges = [appSettings.collar_min_shock, appSettings.collar_max_shock];
-			vibeRanges = [appSettings.collar_min_vibe, appSettings.collar_max_vibe];
-			idleRanges = [appSettings.idle_period_min_ms / 1000, appSettings.idle_period_max_ms / 1000];
-			actionRanges = [appSettings.action_period_min_ms / 1000, appSettings.action_period_max_ms / 1000];
-			loudnessRanges = [appSettings.decibel_threshold_min, appSettings.decibel_threshold_max];
+			settings.updateSettings(message);
+
+			shockRanges = [$settings.collar_min_shock, $settings.collar_max_shock];
+			vibeRanges = [$settings.collar_min_vibe, $settings.collar_max_vibe];
+			idleRanges = [$settings.idle_period_min_ms / 1000, $settings.idle_period_max_ms / 1000];
+			actionRanges = [$settings.action_period_min_ms / 1000, $settings.action_period_max_ms / 1000];
+			loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
 
 			// if (micState.ecd > ecdMax || ecdMax === Infinity) {
 			// 	ecdMax = micState.ecd;
@@ -114,16 +112,17 @@
 
 	onDestroy(() => appSettingsSocket.close());
 
-	async function updateSettings (settings: AppSettings) {
+	async function emitSettings (settings: AppSettings) {
 		appSettingsSocket.send(JSON.stringify({ 
-			...appSettings,
+			...$settings,
 			...settings
 		}));
 	}
 
 	let formField: any;
 
-	function handleSubmit() {
+	function handleSubmit(event: Event) {
+
 		const fd = new FormData(formField)
 		
 		const {
@@ -147,9 +146,16 @@
 			collar_max_shock: shockRanges[1],
 			collar_min_vibe: vibeRanges[0],
 			collar_max_vibe: vibeRanges[1],
+
+			correction_steps: $settings.correction_steps,
+			affirmation_steps: $settings.affirmation_steps,
 		};
 
-		updateSettings(newSettings);
+		settings.updateSettings(newSettings);
+
+		console.log(newSettings);
+
+		emitSettings(newSettings);
 	}
 
 	function sensitivityFormatter(value: number) {
@@ -176,42 +182,94 @@
 
 		<div class="join join-vertical w-full">
 			<div class="collapse collapse-arrow join-item border border-base-300">
-			  <input type="radio" name="my-accordion-4" checked={true} /> 
-			  <div class="collapse-title text-xl font-medium">
-				<!-- <ClockBolt class="lex-shrink-0 mr-2 h-4 w-4 self-center" /> -->
+			  <input type="radio" name="conf-accordion" checked={true} /> 
+			  <div class="collapse-title text-xl font-medium flex">
+				<Clock class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
 				Routine Settings
 			  </div>
 			  <div class="collapse-content"> 
-
                 <div class="form-control">
-                    <label class="label">
+                    <label for="idle_duration" class="label">
                         <span class="label-text">Idle Duration (seconds)</span>
                     </label>
-					<RangeSlider range pushy pips float min={1} max={300} first=label last=label bind:values={idleRanges} />
+					<RangeSlider 
+						range 
+						pushy 
+						pips 
+						float 
+						min={1} 
+						max={300} 
+						first=label 
+						last=label 
+						bind:values={idleRanges} 
+					/>
                 </div>
                 <div class="form-control">
-                    <label class="label">
+                    <label for="action_period" class="label">
                         <span class="label-text">Action Period (seconds)</span>
                     </label>
-					<RangeSlider range pushy pips float min={2} max={30} first=label last=label bind:values={actionRanges} />
+					<RangeSlider 
+						range 
+						pushy 
+						pips 
+						float 
+						min={2} 
+						max={30} 
+						first=label 
+						last=label 
+						bind:values={actionRanges} 
+					/>
                 </div>
-
-
-
 			  </div>
 			</div>
+
 			<div class="collapse collapse-arrow join-item border border-base-300">
-			  <input type="radio" name="my-accordion-4" /> 
-			  <div class="collapse-title text-xl font-medium">
-				<!-- <Microphone class="lex-shrink-0 mr-2 h-4 w-4 self-center" /> -->
+			  <input type="radio" name="conf-accordion" checked={true} /> 
+			  <div class="collapse-title text-xl font-medium flex">
+				<MoodSmileDizzy class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
+				Affirmation Settings
+			  </div>
+			  <div class="collapse-content"> 
+                <EventSeries dataKey="affirmation_steps" />
+			  </div>
+			</div>
+
+			<div class="collapse collapse-arrow join-item border border-base-300">
+			  <input type="radio" name="conf-accordion" checked={true} /> 
+			  <div class="collapse-title text-xl font-medium flex">
+				<MoodSadDizzy class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
+				Correction Settings
+			  </div>
+			  <div class="collapse-content"> 
+                <EventSeries dataKey="correction_steps" />
+			  </div>
+			</div>
+
+
+
+
+			<div class="collapse collapse-arrow join-item border border-base-300">
+			  <input type="radio" name="conf-accordion" /> 
+			  <div class="collapse-title text-xl font-medium flex">
+				<Microphone class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
 				Input Settings
 			  </div>
 			  <div class="collapse-content"> 
                 <div class="form-control">
-                    <label class="label">
+                    <label for="loudness" class="label">
                         <span class="label-text">Loudness Threshold (dB)</span>
                     </label>
-					<RangeSlider range pushy pips float min={30} max={125} first=label last=label bind:values={loudnessRanges} />
+					<RangeSlider 
+						range 
+						pushy 
+						pips 
+						float 
+						min={30} 
+						max={125} 
+						first=label 
+						last=label 
+						bind:values={loudnessRanges} 
+					/>
                 </div>
                 <div class="form-control">
                     <label class="label">
@@ -228,10 +286,10 @@
 					/>
                     <!-- <div class="rating input-group">
                         <span>Less</span>
-                        <input type="radio" name="mic_sensitivity_26" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 26} />
-                        <input type="radio" name="mic_sensitivity_27" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 27} />
-                        <input type="radio" name="mic_sensitivity_28" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 28} />
-                        <input type="radio" name="mic_sensitivity_29" class="mask mask-hexagon" checked={appSettings.mic_sensitivity === 29} />
+                        <input type="radio" name="mic_sensitivity_26" class="mask mask-hexagon" checked={$settings.mic_sensitivity === 26} />
+                        <input type="radio" name="mic_sensitivity_27" class="mask mask-hexagon" checked={$settings.mic_sensitivity === 27} />
+                        <input type="radio" name="mic_sensitivity_28" class="mask mask-hexagon" checked={$settings.mic_sensitivity === 28} />
+                        <input type="radio" name="mic_sensitivity_29" class="mask mask-hexagon" checked={$settings.mic_sensitivity === 29} />
                         <span>More</span>
                     </div> -->
                 </div>
@@ -244,14 +302,14 @@
 			  </div>
 			</div>
 			<div class="collapse collapse-arrow join-item border border-base-300">
-			  <input type="radio" name="my-accordion-4" /> 
-			  <div class="collapse-title text-xl font-medium">
-				<!-- <Microphone class="lex-shrink-0 mr-2 h-4 w-4 self-center" /> -->
+			  <input type="radio" name="conf-accordion" /> 
+			  <div class="collapse-title text-xl font-medium flex">
+				<DeviceWatchBolt class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
 				Collar Settings
 			  </div>
 			  <div class="collapse-content"> 
                 <div class="form-control">
-                    <label class="label">
+                    <label for="remote-id" class="label">
                         <span class="label-text">Remote ID</span>
                         <input name="collar_id" placeholder="13,37" class="input input-bordered max-w-4" />
                     </label>

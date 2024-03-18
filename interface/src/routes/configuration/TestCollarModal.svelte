@@ -65,7 +65,6 @@
                 Strength
             </label>
             <RangeSlider 
-                name="strength"
                 pips 
                 float 
                 min={0.1}
@@ -83,7 +82,6 @@
             </label>
             <RangeSlider 
                 {handleFormatter} 
-                name="duration"
                 min={0.5}
                 max={5}
                 pipstep={10}
