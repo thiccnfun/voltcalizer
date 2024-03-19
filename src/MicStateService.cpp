@@ -100,6 +100,11 @@ struct sum_queue_t {
   float pitch;
 };
 
+struct event_queue_t {
+  bool passed;
+  float dbPassRate;
+};
+
 
 //
 // I2S Reader Task
@@ -214,6 +219,7 @@ void MicStateService::setupReader() {
 
     // Create FreeRTOS queue
     samplesQueue = xQueueCreate(8, sizeof(sum_queue_t));
+    eventsQueue = xQueueCreate(8, sizeof(sum_queue_t));
     
     // Create the I2S reader FreeRTOS task
     // NOTE: Current version of ESP-IDF will pin the task 
@@ -224,6 +230,16 @@ void MicStateService::setupReader() {
 
     xTaskCreatePinnedToCore(
         this->_readerTask,            // Function that should be called
+        "Mic I2S Reader",       // Name of the task (for debugging)
+        I2S_TASK_STACK,                       // Stack size (bytes)
+        this,                       // Pass reference to this class instance
+        (tskIDLE_PRIORITY),         // task priority
+        NULL,                       // Task handle
+        ESP32SVELTEKIT_RUNNING_CORE // Pin to application core
+    );
+
+    xTaskCreatePinnedToCore(
+        this->_eventsTask,            // Function that should be called
         "Mic I2S Reader",       // Name of the task (for debugging)
         I2S_TASK_STACK,                       // Stack size (bytes)
         this,                       // Pass reference to this class instance
@@ -336,12 +352,18 @@ void MicStateService::setupReader() {
             if (doEvaluation) {
               doEvaluation = false;
 
+              event_queue_t eq;
+              eq.passed = evaluatePassed(dbPassRate);
+              eq.dbPassRate = dbPassRate;
+
               // NOTE: collar seems to block in these...
-              if (evaluatePassed(dbPassRate)) {
-                  handleAffirmation(dbPassRate);
-              } else {
-                  handleCorrection(dbPassRate);
-              }
+              // if (eq.passed) {
+              //     handleAffirmation(dbPassRate);
+              // } else {
+              //     handleCorrection(dbPassRate);
+              // }
+
+              xQueueSend(eventsQueue, &eq, portMAX_DELAY);
             }
 
             if (resetConditions) {
@@ -480,7 +502,7 @@ void MicStateService::readerTask() {
         // q.proc_ticks = xTaskGetTickCount() - start_tick;
 
         // Calculate pitch
-        q.pitch = calculatePitch();
+        // q.pitch = calculatePitch();
 
         // analogRead PIEZO_PIN
         // Serial.println(analogRead(PIEZO_PIN));
@@ -489,6 +511,50 @@ void MicStateService::readerTask() {
         // and further calcualte decibel values (division, logarithms, etc...)
         xQueueSend(samplesQueue, &q, portMAX_DELAY);
     }
+}
+
+void MicStateService::eventsTask() {
+  event_queue_t eq;
+  while (xQueueReceive(eventsQueue, &eq, portMAX_DELAY)) {
+    std::vector<EventStep> steps = std::vector<EventStep>();
+
+    if (eq.passed) {
+      assignAffirmationSteps(steps);
+      // handleAffirmation(eq.dbPassRate);
+    } else {
+      assignCorrectionSteps(steps);
+      // handleCorrection(eq.dbPassRate);
+    }
+
+    // iterate through steps and execute
+    for (EventStep step : steps) {
+      // execute step
+      processStep(step, eq.dbPassRate);
+    }
+  }
+}
+
+void MicStateService::processStep(EventStep step, float passRate) {
+  // execute step
+  
+  switch (step.type) {
+    case EventType::COLLAR_VIBRATION:
+      Serial.println("Vibrating collar");
+      vibrateCollar(50, 1000);
+      break;
+    case EventType::COLLAR_SHOCK:
+      Serial.println("Shocking collar");
+      beepCollar(1000);
+      break;
+    case EventType::COLLAR_BEEP:
+      Serial.println("Beeping collar");
+      beepCollar(1000);
+      break;
+    default:
+      // unknown event type
+      break;
+  }
+
 }
 
 
@@ -728,6 +794,22 @@ void MicStateService::assignConditionValues(
         } else {
           dbThreshold = random(settings.decibelThresholdMin, settings.decibelThresholdMax);
         }
+    });
+}
+
+void MicStateService::assignAffirmationSteps(
+    std::vector<EventStep> &affirmationSteps
+) {
+    _appSettingsService->read([&](AppSettings &settings) {
+        affirmationSteps = settings.affirmationSteps;
+    });
+}
+
+void MicStateService::assignCorrectionSteps(
+    std::vector<EventStep> &correctionSteps
+) {
+    _appSettingsService->read([&](AppSettings &settings) {
+        correctionSteps = settings.correctionSteps;
     });
 }
 
