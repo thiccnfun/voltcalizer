@@ -101,6 +101,7 @@ struct sum_queue_t {
 };
 
 struct event_queue_t {
+  AlertType alert;
   bool passed;
   float dbPassRate;
 };
@@ -260,9 +261,11 @@ void MicStateService::setupReader() {
     int actDuration = 4000; // how long the user has to act before the event ends
     // int actWindow = 2000;
     double thresholdDb = 80;
+    AlertType alertType = AlertType::NONE;
 
-    assignConditionValues(thresholdDb);
-    assignDurationValues(idleDuration, actDuration);
+    // assignConditionValues(thresholdDb);
+    // assignDurationValues(idleDuration, actDuration);
+    assignRoutineConditionValues(thresholdDb, idleDuration, actDuration, alertType);
     // int sequenceDuration = actDuration;
     int eventCountdown = actDuration;
 
@@ -275,6 +278,8 @@ void MicStateService::setupReader() {
     bool stopOnPass = true;
     bool doEvaluation = false;
     float dbPassRate = 0;
+    int alertTime = 1500; // 1 second plus a little buffer
+    bool hasAlerted = false;
 
     // Read sum of samaples, calculated by 'i2s_reader_task'
     while (xQueueReceive(samplesQueue, &q, portMAX_DELAY)) {
@@ -308,12 +313,16 @@ void MicStateService::setupReader() {
             currentTime = millis();
             elapsedTime = currentTime - startTime;
             
-            eventCountdown = actDuration - elapsedTime + idleDuration;
+            eventCountdown = actDuration - elapsedTime + idleDuration + (alertType == AlertType::NONE ? 0 : alertTime);
             
             if (_state.enabled) {
+
+              // proceed to evaluation
               if (eventCountdown <= 0) {
                 doEvaluation = true;
                 resetConditions = true;
+
+              // start evaluation window
               } else if (eventCountdown <= actDuration) {
                 Serial.println("--------- ACTION WINDOW --------------");
                 ticks += 1;
@@ -333,6 +342,15 @@ void MicStateService::setupReader() {
                 if (!doEvaluation) {
                   dbPassRate = (float)ticksPassed / ticks;
                 }
+
+              // start alert window
+              } else if (!hasAlerted && eventCountdown <= actDuration + alertTime) {
+                event_queue_t eq;
+                eq.alert = alertType;
+                eq.passed = true;
+                eq.dbPassRate = 1;
+                xQueueSend(eventsQueue, &eq, portMAX_DELAY);
+                hasAlerted = true;
               }
 
 
@@ -353,6 +371,7 @@ void MicStateService::setupReader() {
               doEvaluation = false;
 
               event_queue_t eq;
+              eq.alert = AlertType::NONE;
               eq.passed = evaluatePassed(dbPassRate);
               eq.dbPassRate = dbPassRate;
 
@@ -372,12 +391,14 @@ void MicStateService::setupReader() {
                 // NOTE: maybe delay accordingly
                 startTime = currentTime;
 
-                assignConditionValues(thresholdDb);
-                assignDurationValues(idleDuration, actDuration);
+                // assignConditionValues(thresholdDb);
+                // assignDurationValues(idleDuration, actDuration);
+                assignRoutineConditionValues(thresholdDb, idleDuration, actDuration, alertType);
                 // sequenceDuration = actDuration;
                 ticks = 0;
                 ticksPassed = 0;
                 dbPassRate = 0;
+                hasAlerted = false;
             }
         }
     
@@ -517,6 +538,16 @@ void MicStateService::eventsTask() {
   event_queue_t eq;
   while (xQueueReceive(eventsQueue, &eq, portMAX_DELAY)) {
     std::vector<EventStep> steps = std::vector<EventStep>();
+
+    if (eq.alert == AlertType::COLLAR_BEEP) {
+      Serial.println("Alert - Beeping collar");
+      beepCollar(1000);
+      continue;
+    } else if (eq.alert == AlertType::COLLAR_VIBRATION) {
+      Serial.println("Alert - Vibrating collar");
+      vibrateCollar(50, 1000);
+      continue;
+    }
 
     if (eq.passed) {
       assignAffirmationSteps(steps);
@@ -766,35 +797,33 @@ void MicStateService::updateState(
   }, "db_set");
 }
 
-void MicStateService::assignDurationValues(
+void MicStateService::assignRoutineConditionValues(
+    double &dbThreshold,
     int &idleDuration,
-    int &actDuration
+    int &actDuration,
+    AlertType &alertType
 ) {
-    _appSettingsService->read([&](AppSettings &settings) {
-      if (settings.actionPeriodMaxMs == settings.actionPeriodMinMs) {
-        actDuration = settings.actionPeriodMinMs;
-      } else {
-        actDuration = random(settings.actionPeriodMinMs, settings.actionPeriodMaxMs);
-      }
+  _appSettingsService->read([&](AppSettings &settings) {
+    if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
+      dbThreshold = settings.decibelThresholdMin;
+    } else {
+      dbThreshold = random(settings.decibelThresholdMin, settings.decibelThresholdMax);
+    }
 
-      if (settings.idlePeriodMaxMs == settings.idlePeriodMinMs) {
-        idleDuration = settings.idlePeriodMinMs;
-      } else {
-        idleDuration = random(settings.idlePeriodMinMs, settings.idlePeriodMaxMs);
-      }
-    });
-}
+    if (settings.actionPeriodMaxMs == settings.actionPeriodMinMs) {
+      actDuration = settings.actionPeriodMinMs;
+    } else {
+      actDuration = random(settings.actionPeriodMinMs, settings.actionPeriodMaxMs);
+    }
 
-void MicStateService::assignConditionValues(
-    double &dbThreshold
-) {
-    _appSettingsService->read([&](AppSettings &settings) {
-        if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
-          dbThreshold = settings.decibelThresholdMin;
-        } else {
-          dbThreshold = random(settings.decibelThresholdMin, settings.decibelThresholdMax);
-        }
-    });
+    if (settings.idlePeriodMaxMs == settings.idlePeriodMinMs) {
+      idleDuration = settings.idlePeriodMinMs;
+    } else {
+      idleDuration = random(settings.idlePeriodMinMs, settings.idlePeriodMaxMs);
+    }
+
+    alertType = settings.alertType;
+  });
 }
 
 void MicStateService::assignAffirmationSteps(

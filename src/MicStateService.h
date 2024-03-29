@@ -103,12 +103,11 @@ protected:
     void eventsTask();
     static void _readerTask(void *_this) { static_cast<MicStateService *>(_this)->readerTask(); }
     static void _eventsTask(void *_this) { static_cast<MicStateService *>(_this)->eventsTask(); }
-    void assignDurationValues(
+    void assignRoutineConditionValues(
+        double &dbThreshold,
         int &idleDuration,
-        int &actDuration
-    );
-    void assignConditionValues(
-        double &dbThreshold
+        int &actDuration,
+        AlertType &alertType
     );
     int evaluateConditions(double currentDb, int thresholdDb);
     bool evaluatePassed(float passRate);
@@ -131,7 +130,7 @@ private:
     AppSettingsService *_appSettingsService;
     NotificationEvents *_notificationEvents;
     CH8803 *_collar;
-    ArduinoFFT<float> *_fft = nullptr;
+    ArduinoFFT<float> *_fft;
     AudioAnalysis _audioInfo;
     float samples[SAMPLES_SHORT] __attribute__((aligned(4)));
     int32_t* intSamples = new int32_t[SAMPLES_SHORT];
