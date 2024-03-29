@@ -27,6 +27,12 @@
 #define TEST_COLLAR_ENDPOINT_PATH "/rest/testCollar"
 #define APP_SETTINGS_SOCKET_PATH "/ws/appSettings"
 
+enum class AlertType {
+    NONE,
+    COLLAR_BEEP,
+    COLLAR_VIBRATION,
+};
+
 enum class EventType {
     COLLAR_BEEP,
     COLLAR_VIBRATION,
@@ -68,6 +74,8 @@ public:
     int collarMinVibe = 5;
     int collarMaxVibe = 100;
 
+    AlertType alertType = AlertType::NONE;
+
     std::vector<EventStep> correctionSteps;
     std::vector<EventStep> affirmationSteps;
 
@@ -82,6 +90,7 @@ public:
         root["mic_sensitivity"] = settings.micSensitivity;
         root["collar_min_shock"] = settings.collarMinShock;
         root["collar_max_shock"] = settings.collarMaxShock;
+        root["alert_type"] = static_cast<int>(settings.alertType);
 
       
 
@@ -117,6 +126,7 @@ public:
         settings.collarMaxShock = root["collar_max_shock"] | settings.collarMaxShock;
         settings.collarMinVibe = root["collar_min_vibe"] | settings.collarMinVibe;
         settings.collarMaxVibe = root["collar_max_vibe"] | settings.collarMaxVibe;
+        settings.alertType = static_cast<AlertType>(root["alert_type"].as<int>());
 
         JsonArray correctionStepsArray = root["correction_steps"];
         settings.correctionSteps.clear();
