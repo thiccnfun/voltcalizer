@@ -1,4 +1,4 @@
-import type { AppSettings, EventStep } from '$lib/types';
+import { AlertType, type AppSettings, type EventStep } from '$lib/types';
 import { writable } from 'svelte/store';
 
 let appSettings: AppSettings = {
@@ -9,6 +9,7 @@ let appSettings: AppSettings = {
 	decibel_threshold_min: 80,
 	decibel_threshold_max: 95,
 	mic_sensitivity: 27,
+	alert_type: AlertType.NONE,
 
 	collar_min_shock: 5,
 	collar_max_shock: 75,

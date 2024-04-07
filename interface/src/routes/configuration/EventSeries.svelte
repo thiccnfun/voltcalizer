@@ -93,7 +93,7 @@
                 <label for="strength">
                     Strength
                     <select 
-                        class="select select-bordered select-sm" 
+                        class="select select-bordered select-sm ml-3" 
                         bind:value={step.strength_range_type} 
                         on:change={() => {
                             if (step.strength_range_type === RangeType.FIXED) {
@@ -128,7 +128,7 @@
                 <label for="duration flex">
                     Duration
                     <select 
-                        class="select select-bordered select-sm" 
+                        class="select select-bordered select-sm ml-3" 
                         bind:value={step.time_range_type}
                         on:change={() => {
                             if (step.time_range_type === RangeType.FIXED) {

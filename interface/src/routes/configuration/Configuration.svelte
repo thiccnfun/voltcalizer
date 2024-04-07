@@ -16,6 +16,7 @@
 	import TestCollarModal from './TestCollarModal.svelte';
 	import EventSeries from './EventSeries.svelte';
 	import type { AppSettings } from '$lib/types';
+	import { AlertType } from '$lib/types';
 	import { settings } from '$lib/stores/settings';
 
 	// type AppSettings = {
@@ -52,6 +53,7 @@
 	let actionRanges = [$settings.action_period_min_ms / 1000, $settings.action_period_max_ms / 1000];
 	let loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
 	let micSensitivity = [$settings.mic_sensitivity];
+	let alertType = $settings.alert_type;
 
 	// async function getAppSettings() {
 	// 	try {
@@ -100,6 +102,7 @@
 			idleRanges = [$settings.idle_period_min_ms / 1000, $settings.idle_period_max_ms / 1000];
 			actionRanges = [$settings.action_period_min_ms / 1000, $settings.action_period_max_ms / 1000];
 			loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
+			alertType = $settings.alert_type;
 
 			// if (micState.ecd > ecdMax || ecdMax === Infinity) {
 			// 	ecdMax = micState.ecd;
@@ -146,6 +149,7 @@
 			collar_max_shock: shockRanges[1],
 			collar_min_vibe: vibeRanges[0],
 			collar_max_vibe: vibeRanges[1],
+			alert_type: alertType,
 
 			correction_steps: $settings.correction_steps,
 			affirmation_steps: $settings.affirmation_steps,
@@ -161,6 +165,18 @@
 	function sensitivityFormatter(value: number) {
 		return value < 28 ? 'Less' : 'More';
 	}
+
+    function alertTypeLabel(alert: AlertType | string) {
+        switch (alert) {
+			case AlertType.COLLAR_BEEP:
+				return "Collar Beep";
+			case AlertType.COLLAR_VIBRATION:
+				return "Collar Vibration";
+				default:
+			case AlertType.NONE:
+				return "None";
+        }
+    }
 
 	onMount(() => {
 		// getAppSettings();
@@ -220,11 +236,24 @@
 						bind:values={actionRanges} 
 					/>
                 </div>
+                <div class="form-control">
+                    <label for="action_period" class="label">
+                        <span class="label-text mr-4">Alert Type</span>
+						<select 
+							class="select select-bordered select-sm mr-auto" 
+							bind:value={alertType}
+						>
+							{#each Object.values(AlertType).filter(v => typeof v !== 'string') as type}
+								<option value={type}>{alertTypeLabel(type)}</option>
+							{/each}
+						</select>
+                    </label>
+                </div>
 			  </div>
 			</div>
 
 			<div class="collapse collapse-arrow join-item border border-base-300">
-			  <input type="radio" name="conf-accordion" checked={true} /> 
+			  <input type="radio" name="conf-accordion" /> 
 			  <div class="collapse-title text-xl font-medium flex">
 				<MoodSmileDizzy class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
 				Affirmation Settings
@@ -235,7 +264,7 @@
 			</div>
 
 			<div class="collapse collapse-arrow join-item border border-base-300">
-			  <input type="radio" name="conf-accordion" checked={true} /> 
+			  <input type="radio" name="conf-accordion" /> 
 			  <div class="collapse-title text-xl font-medium flex">
 				<MoodSadDizzy class="lex-shrink-0 mr-2 mt-2 h-4 w-4" />
 				Correction Settings
