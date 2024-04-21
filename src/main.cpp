@@ -12,7 +12,6 @@
  *   the terms of the LGPL v3 license. See the LICENSE file for details.
  **/
 
-#include <ZapMe.h>
 #include <ESP32SvelteKit.h>
 #include <AppSettingsService.h>
 #include <MicStateService.h>
@@ -25,17 +24,14 @@ PsychicHttpServer server;
 
 ESP32SvelteKit esp32sveltekit(&server, 115);
 
-CH8803 collar = CH8803(RF_PIN, 0);
-
 AppSettingsService appSettingsService =
-    AppSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager(), &collar);
+    AppSettingsService(&server, esp32sveltekit.getFS(), esp32sveltekit.getSecurityManager());
 
 MicStateService micStateService = MicStateService(&server,
                                                         esp32sveltekit.getSecurityManager(),
                                                         esp32sveltekit.getMqttClient(),
                                                         &appSettingsService,
-                                                        esp32sveltekit.getNotificationEvents(),
-                                                        &collar);
+                                                        esp32sveltekit.getNotificationEvents());
 
 
 
@@ -49,15 +45,17 @@ void setup()
   // set output pins for collar RF
   pinMode(RF_PIN, OUTPUT);
 
-
-
-
   delay(1000); // Safety
+    
+  if (!OpenShock::CommandHandler::Init()) {
+    ESP_LOGW(TAG, "Unable to initialize OpenShock");
+  } else {
+    OpenShock::CommandHandler::SetRfTxPin(RF_PIN);
+  }
 
-
-    esp32sveltekit.begin();
-    appSettingsService.begin();
-    micStateService.begin();
+  esp32sveltekit.begin();
+  appSettingsService.begin();
+  micStateService.begin();
 }
 
 void loop()
