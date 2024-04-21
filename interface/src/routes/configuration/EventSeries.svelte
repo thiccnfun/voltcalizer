@@ -56,7 +56,7 @@
                 return "Random";
             case RangeType.PROGRESSIVE:
                 return "Progressive";
-            case RangeType.REDEEMAABLE:
+            case RangeType.REDEEMABLE:
                 return "Redeemable";
             case RangeType.GRADED:
                 return "Graded";

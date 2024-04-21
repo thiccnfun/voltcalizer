@@ -43,7 +43,7 @@ enum class RangeType {
     FIXED,
     RANDOM,
     PROGRESSIVE,
-    REDEEMAABLE,
+    REDEEMABLE,
     GRADED,
 };
 
