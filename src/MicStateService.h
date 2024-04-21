@@ -27,12 +27,6 @@
 #include <WebSocketServer.h>
 #include <NotificationEvents.h>
 // #include <WebSocketClient.h>
-#include <ZapMe.h>
-
-
-#define DEFAULT_LED_STATE false
-// #define OFF_STATE "OFF"
-// #define ON_STATE "ON"
 
 #define MIC_STATE_ENDPOINT_PATH "/rest/micState"
 #define MIC_STATE_SOCKET_PATH "/ws/micState"
@@ -51,8 +45,6 @@ public:
     double pitchThreshold = 0;
     double pitchValue = 0;
     int eventCountdown = 0;
-    // int actDuration = 0;
-    // int collarId = 0;
     float dbPassRate = 0;
     float pitchPassRate = 0;
 
@@ -63,7 +55,6 @@ public:
         root["dbt"] = settings.dbThreshold;
         root["dbv"] = settings.dbValue;
         root["ecd"] = settings.eventCountdown;
-        // root["acd"] = settings.actDuration;
         root["pv"] = settings.pitchValue;
         root["pt"] = settings.pitchThreshold;
         root["en"] = settings.enabled;
@@ -85,18 +76,19 @@ public:
 class MicStateService : public StatefulService<MicState>
 {
 public:
-    MicStateService(PsychicHttpServer *server,
-                      SecurityManager *securityManager,
-                      PsychicMqttClient *mqttClient,
-                      AppSettingsService *appSettingsService,
-                      NotificationEvents *notificationEvents,
-                      CH8803 *collar);
+    MicStateService(
+        PsychicHttpServer *server,
+        SecurityManager *securityManager,
+        PsychicMqttClient *mqttClient,
+        AppSettingsService *appSettingsService,
+        NotificationEvents *notificationEvents
+    );
     void begin();
     void setupReader();
-    void setupCollar();
     void initializeI2s();
-    void vibrateCollar(int strength, int duration);
-    void beepCollar(int duration);
+    bool vibrateCollar(int strength, int duration);
+    bool beepCollar(int duration);
+    bool stopCollar();
 
 protected:
     void readerTask();
@@ -109,10 +101,9 @@ protected:
         int &actDuration,
         AlertType &alertType
     );
+    // void evaluate(float dbPassRate);
     int evaluateConditions(double currentDb, int thresholdDb);
     bool evaluatePassed(float passRate);
-    void handleAffirmation(float passRate);
-    void handleCorrection(float passRate);
     void assignAffirmationSteps(
         std::vector<EventStep> &affirmationSteps
     );
@@ -129,7 +120,6 @@ private:
     PsychicMqttClient *_mqttClient;
     AppSettingsService *_appSettingsService;
     NotificationEvents *_notificationEvents;
-    CH8803 *_collar;
     ArduinoFFT<float> *_fft;
     AudioAnalysis _audioInfo;
     float samples[SAMPLES_SHORT] __attribute__((aligned(4)));
@@ -142,7 +132,6 @@ private:
     float _weighingFactors[SAMPLES_SHORT];
 
     void registerConfig();
-    void onConfigUpdated();
     void updateState(
         float dbValue, 
         float pitchValue, 
