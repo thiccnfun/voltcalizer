@@ -19,8 +19,8 @@
 #include <WebSocketServer.h>
 #include <FSPersistence.h>
 // #include <SettingValue.h>
-#include <ZapMe.h>
 #include <vector>
+#include <CommandHandler.h>
 
 #define APP_SETTINGS_FILE "/config/appSettings.json"
 #define APP_SETTINGS_ENDPOINT_PATH "/rest/appSettings"
@@ -183,7 +183,11 @@ public:
 class AppSettingsService : public StatefulService<AppSettings>
 {
 public:
-    AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager, CH8803 *collar);
+    AppSettingsService(
+        PsychicHttpServer *server, 
+        FS *fs, 
+        SecurityManager *securityManager
+    );
     void begin();
 
 private:
@@ -192,7 +196,6 @@ private:
     WebSocketServer<AppSettings> _webSocketServer;
     SecurityManager *_securityManager;
     PsychicHttpServer *_server;
-    CH8803 *_collar;
 };
 
 #endif // end AppSettingsService_h

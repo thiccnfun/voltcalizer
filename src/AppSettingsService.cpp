@@ -14,7 +14,7 @@
 
 #include <AppSettingsService.h>
 
-AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager, CH8803 *collar) : _httpEndpoint(AppSettings::read,
+AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, SecurityManager *securityManager) : _httpEndpoint(AppSettings::read,
                                                                                                                                         AppSettings::update,
                                                                                                                                         this,
                                                                                                                                         server,
@@ -28,8 +28,7 @@ AppSettingsService::AppSettingsService(PsychicHttpServer *server, FS *fs, Securi
                                                                                                             server,
                                                                                                             APP_SETTINGS_SOCKET_PATH,
                                                                                                             securityManager,
-                                                                                                            AuthenticationPredicates::IS_AUTHENTICATED),
-                                                                                             _collar(collar)
+                                                                                                            AuthenticationPredicates::IS_AUTHENTICATED)
 {
     _server = server;
     _securityManager = securityManager;
@@ -59,37 +58,31 @@ void AppSettingsService::begin()
                     return request->reply(400);
                 }
 
-                std::map<String, EventType> actionMap = {
-                    {"shock", EventType::COLLAR_SHOCK},
-                    {"vibration", EventType::COLLAR_VIBRATION},
-                    {"beep", EventType::COLLAR_BEEP}
+                std::map<String, OpenShock::ShockerCommandType> actionMap = {
+                    {"shock", OpenShock::ShockerCommandType::Shock},
+                    {"vibration", OpenShock::ShockerCommandType::Vibrate},
+                    {"beep", OpenShock::ShockerCommandType::Sound}
                 };
 
                 JsonObject jsonObject = json.as<JsonObject>();
                 PsychicJsonResponse response = PsychicJsonResponse(request, false, DEFAULT_BUFFER_SIZE);
                 JsonObject responseObject = response.getRoot();
                 String type = jsonObject["type"].as<String>();
-                EventType action = actionMap.count(type) > 0 ? actionMap[type] : EventType::COLLAR_BEEP;
-                int value = jsonObject["value"].as<int>();
+                OpenShock::ShockerCommandType action = 
+                    actionMap.count(type) > 0 ? actionMap[type] : OpenShock::ShockerCommandType::Sound;
+                int intensity = jsonObject["value"].as<int>();
                 int duration = jsonObject["duration"].as<int>();
 
-                switch (action)
+                if (!OpenShock::CommandHandler::Ok())
                 {
-                    case EventType::COLLAR_SHOCK:
-                        _collar->sendShock(value, duration);
-                        responseObject["res"] = "ok";
-                        break;
-                    case EventType::COLLAR_VIBRATION:
-                        _collar->sendVibration(value, duration);
-                        responseObject["res"] = "ok";
-                        break;
-                    case EventType::COLLAR_BEEP:
-                        _collar->sendAudio(0, duration);
-                        responseObject["res"] = "ok";
-                        break;
-                    default:
-                        return request->reply(400);
+                    responseObject["res"] = "collar not initialized";
+                    return response.send();
                 }
+
+                responseObject["res"] = 
+                    OpenShock::CommandHandler::HandleCommand(
+                        OpenShock::ShockerModelType::CaiXianlin, 0, action, intensity, duration
+                    ) ? "ok" : "failed";
 
                 return response.send();
             },
