@@ -36,6 +36,7 @@ public:
     Evaluator(AppSettingsService *appSettingsService);
     ConditionState evaluateConditions(double currentDb, int thresholdDb);
     bool vibrateCollar(int strength, int duration);
+    bool shockCollar(int strength, int duration);
     bool beepCollar(int duration);
     bool stopCollar();
     QueueHandle_t eventsQueue;

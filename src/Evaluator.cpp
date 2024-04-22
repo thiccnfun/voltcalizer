@@ -119,6 +119,17 @@ bool Evaluator::beepCollar(int duration) {
   );
 }
 
+bool Evaluator::shockCollar(int strength, int duration) {
+  ESP_LOGI(TAG, "Shocking collar: %d", duration);
+  return OpenShock::CommandHandler::HandleCommand(
+    OpenShock::ShockerModelType::CaiXianlin, 
+    0, 
+    OpenShock::ShockerCommandType::Shock,
+    strength,
+    duration
+  );
+}
+
 bool Evaluator::stopCollar() {
   ESP_LOGI(TAG, "Stopping collar");
   return OpenShock::CommandHandler::HandleCommand(
@@ -181,7 +192,7 @@ void Evaluator::processCollarStep(EventStep step, float passRate) {
       vibrateCollar(strength, duration);
       break;
     case EventType::COLLAR_SHOCK:
-      beepCollar(duration);
+      shockCollar(strength, duration);
       break;
     case EventType::COLLAR_BEEP:
       beepCollar(duration);
