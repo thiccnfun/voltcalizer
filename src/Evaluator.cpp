@@ -1,20 +1,4 @@
-/**
- *   ESP32 SvelteKit
- *
- *   A simple, secure and extensible framework for IoT projects for ESP32 platforms
- *   with responsive Sveltekit front-end built with TailwindCSS and DaisyUI.
- *   https://github.com/theelims/ESP32-sveltekit
- *
- *   Copyright (C) 2018 - 2023 rjwats
- *   Copyright (C) 2023 theelims
- *
- *   All Rights Reserved. This software may be modified and distributed under
- *   the terms of the LGPL v3 license. See the LICENSE file for details.
- **/
-
 #include <Evaluator.h>
-
-#define I2S_TASK_STACK 2048
 
 #ifndef RF_PIN
 #define RF_PIN 21
@@ -38,7 +22,7 @@ void Evaluator::begin() {
   xTaskCreatePinnedToCore(
     this->_taskRunner,
     "eventsTask",
-    I2S_TASK_STACK,
+    2048,
     this,
     (tskIDLE_PRIORITY),
     NULL,
@@ -66,15 +50,10 @@ void Evaluator::task() {
     }
 
     std::vector<EventStep> steps = std::vector<EventStep>();
-
     if (evaluatePassed(eq.dbPassRate)) {
       assignAffirmationSteps(steps);
-
-      Serial.println("Affirmation steps");
     } else {
       assignCorrectionSteps(steps);
-
-      Serial.println("Correction steps");
     }
 
     for (EventStep step : steps) {
@@ -168,10 +147,6 @@ bool Evaluator::evaluatePassed(float passRate) {
 }
 
 void Evaluator::processStep(EventStep step, float passRate) {
-  int stepDuration = 1000;
-
-  Serial.println("Processing step");
-
   switch (step.type) {
     case EventType::COLLAR_VIBRATION:
     case EventType::COLLAR_SHOCK:
