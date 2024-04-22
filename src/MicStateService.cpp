@@ -14,16 +14,7 @@
 
 #include <MicStateService.h>
 
-
-
-
-
-
-
 #include <ArduinoFFT.h>
-// #include <cmath>
-// #include <complex>
-// #include <vector>
 #include <driver/i2s.h>
 #include <filters.h>
 
@@ -99,14 +90,6 @@ struct sum_queue_t {
   float pitch;
 };
 
-struct event_queue_t {
-  AlertType alertType;
-  int alertDuration;
-  int alertStrength;
-  float dbPassRate;
-};
-
-
 //
 // I2S Reader Task
 //
@@ -124,23 +107,10 @@ struct event_queue_t {
 #define I2S_TASK_STACK 2048
 
 
-
-
-
-
-
-
 #define SCL_INDEX 0x00
 #define SCL_TIME 0x01
 #define SCL_FREQUENCY 0x02
 #define SCL_PLOT 0x03
-
-
-
-
-#define CONDITIONS_NOT_EVALUATED 0
-#define CONDITIONS_NOT_REACHED 1
-#define CONDITIONS_REACHED 2
 
 const char* TAG = "MicStateService";
 
@@ -182,40 +152,10 @@ void MicStateService::begin()
     _httpEndpoint.begin();
     _webSocketServer.begin();
 
+    _evaluator = new Evaluator(_appSettingsService);
+    _evaluator->begin();
+
     setupReader();
-}
-
-bool MicStateService::vibrateCollar(int strength, int duration) {
-  ESP_LOGI(TAG, "Vibrating collar");
-  return OpenShock::CommandHandler::HandleCommand(
-    OpenShock::ShockerModelType::CaiXianlin, 
-    0, 
-    OpenShock::ShockerCommandType::Vibrate,
-    strength,
-    duration
-  );
-}
-
-bool MicStateService::beepCollar(int duration) {
-  ESP_LOGI(TAG, "Beeping collar");
-  return OpenShock::CommandHandler::HandleCommand(
-    OpenShock::ShockerModelType::CaiXianlin, 
-    0, 
-    OpenShock::ShockerCommandType::Sound,
-    100, 
-    duration
-  );
-}
-
-bool MicStateService::stopCollar() {
-  ESP_LOGI(TAG, "Stopping collar");
-  return OpenShock::CommandHandler::HandleCommand(
-    OpenShock::ShockerModelType::CaiXianlin, 
-    0, 
-    OpenShock::ShockerCommandType::Stop,
-    0, 
-    0
-  );
 }
 
 void MicStateService::setupReader() {
@@ -228,30 +168,11 @@ void MicStateService::setupReader() {
   // _audioInfo.bandPeakFalloff(AudioAnalysis::EXPONENTIAL_FALLOFF, 0.05); // set the band peak fall off rate
   // _audioInfo.vuPeakFalloff(AudioAnalysis::EXPONENTIAL_FALLOFF, 0.05);    // set 
 
-
     // Create FreeRTOS queue
     samplesQueue = xQueueCreate(8, sizeof(sum_queue_t));
-    eventsQueue = xQueueCreate(8, sizeof(event_queue_t));
-    
-    // Create the I2S reader FreeRTOS task
-    // NOTE: Current version of ESP-IDF will pin the task 
-    //       automatically to the first core it happens to run on
-    //       (due to using the hardware FPU instructions).
-    //       For manual control see: xTaskCreatePinnedToCore
-    // xTaskCreate(_readerTask, "Mic I2S Reader", I2S_TASK_STACK, NULL, I2S_TASK_PRI, NULL);
 
     xTaskCreatePinnedToCore(
         this->_readerTask,            // Function that should be called
-        "Mic I2S Reader",       // Name of the task (for debugging)
-        I2S_TASK_STACK,                       // Stack size (bytes)
-        this,                       // Pass reference to this class instance
-        (tskIDLE_PRIORITY),         // task priority
-        NULL,                       // Task handle
-        ESP32SVELTEKIT_RUNNING_CORE // Pin to application core
-    );
-
-    xTaskCreatePinnedToCore(
-        this->_eventsTask,            // Function that should be called
         "Mic I2S Reader",       // Name of the task (for debugging)
         I2S_TASK_STACK,                       // Stack size (bytes)
         this,                       // Pass reference to this class instance
@@ -344,7 +265,7 @@ void MicStateService::setupReader() {
                 Serial.println("--------- ACTION WINDOW --------------");
                 ticks += 1;
 
-                if (evaluateConditions(Leq_dB, thresholdDb) == CONDITIONS_REACHED) {
+                if (_evaluator->evaluateConditions(Leq_dB, thresholdDb) == ConditionState::REACHED) {
                   ticksPassed += 1;
 
                   // if setup to stop on the first pass, proceed to evaluation
@@ -380,16 +301,11 @@ void MicStateService::setupReader() {
               dbPassRate
             );
 
-            if (doEvaluation || doAlert) {
-              event_queue_t eq;
-              eq.alertType = doAlert ? alertType : AlertType::NONE;
-              eq.alertDuration = alertDuration;
-              eq.alertStrength = alertStrength;
-              eq.dbPassRate = dbPassRate;
-
-              xQueueSend(eventsQueue, &eq, portMAX_DELAY);
-              
+            if (doEvaluation) {
+              _evaluator->queueEvaluation(dbPassRate);
               doEvaluation = false;
+            } else if (doAlert) {
+              _evaluator->queueAlert(alertType, alertDuration, alertStrength);
               doAlert = false;
             }
 
@@ -413,22 +329,6 @@ void MicStateService::setupReader() {
         // Debug only
         //Serial.printf("%u processing ticks\n", q.proc_ticks);
     }
-}
-
-int MicStateService::evaluateConditions(double currentDb, int thresholdDb) {
-
-  // TODO: different evaluation methods
-  if (currentDb >= thresholdDb) {
-      return CONDITIONS_REACHED;
-  }
-
-  return CONDITIONS_NOT_REACHED;
-}
-
-bool MicStateService::evaluatePassed(float passRate) {
-
-  // TODO: different evaluation methods
-  return passRate >= 0.5;
 }
 
 void MicStateService::initializeI2s() {
@@ -523,64 +423,6 @@ void MicStateService::readerTask() {
         xQueueSend(samplesQueue, &q, portMAX_DELAY);
     }
 }
-
-void MicStateService::eventsTask() {
-  event_queue_t eq;
-  while (xQueueReceive(eventsQueue, &eq, portMAX_DELAY)) {
-
-    if (eq.alertType != AlertType::NONE) {
-      Serial.println("Alerting user");
-
-      if (eq.alertType == AlertType::COLLAR_VIBRATION) {
-        vibrateCollar(eq.alertStrength, eq.alertDuration);
-      } else if (eq.alertType == AlertType::COLLAR_BEEP) {
-        beepCollar(eq.alertDuration);
-      }
-
-      vTaskDelay(eq.alertDuration / portTICK_PERIOD_MS);
-      stopCollar(); 
-
-      continue;
-    }
-
-    std::vector<EventStep> steps = std::vector<EventStep>();
-
-    if (evaluatePassed(eq.dbPassRate)) {
-      assignAffirmationSteps(steps);
-    } else {
-      assignCorrectionSteps(steps);
-    }
-
-    for (EventStep step : steps) {
-      processStep(step, eq.dbPassRate);
-    }
-  }
-}
-
-void MicStateService::processStep(EventStep step, float passRate) {
-  // execute step
-  
-  int stepDuration = 1000;
-  switch (step.type) {
-    case EventType::COLLAR_VIBRATION:
-      vibrateCollar(50, stepDuration);
-      break;
-    case EventType::COLLAR_SHOCK:
-      beepCollar(stepDuration);
-      break;
-    case EventType::COLLAR_BEEP:
-      beepCollar(stepDuration);
-      break;
-    default:
-      // unknown event type
-      break;
-  }
-  
-  vTaskDelay(stepDuration / portTICK_PERIOD_MS);
-
-  stopCollar();
-}
-
 
 // Function to calculate the pitch using FFT
 // float MicStateService::calculatePitch(const std::vector<float>& samples, int sampleRate) {
@@ -819,25 +661,6 @@ void MicStateService::assignRoutineConditionValues(
     alertType = settings.alertType;
   });
 }
-
-void MicStateService::assignAffirmationSteps(
-    std::vector<EventStep> &affirmationSteps
-) {
-    _appSettingsService->read([&](AppSettings &settings) {
-        affirmationSteps = settings.affirmationSteps;
-    });
-}
-
-void MicStateService::assignCorrectionSteps(
-    std::vector<EventStep> &correctionSteps
-) {
-    _appSettingsService->read([&](AppSettings &settings) {
-        correctionSteps = settings.correctionSteps;
-    });
-}
-
-
-
 
 // void MicStateService::computeFrequencies(uint8_t bandSize)
 // {

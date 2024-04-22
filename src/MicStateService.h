@@ -16,6 +16,7 @@
  **/
 
 #include <AppSettingsService.h>
+#include <Evaluator.h>
 
 // #include <complex>
 // #include <vector>
@@ -86,31 +87,19 @@ public:
     void begin();
     void setupReader();
     void initializeI2s();
-    bool vibrateCollar(int strength, int duration);
-    bool beepCollar(int duration);
-    bool stopCollar();
 
 protected:
+    Evaluator *_evaluator;
     void readerTask();
     void eventsTask();
     static void _readerTask(void *_this) { static_cast<MicStateService *>(_this)->readerTask(); }
-    static void _eventsTask(void *_this) { static_cast<MicStateService *>(_this)->eventsTask(); }
+    // static void _eventsTask(void *_this) { static_cast<MicStateService *>(_this)->eventsTask(); }
     void assignRoutineConditionValues(
         double &dbThreshold,
         int &idleDuration,
         int &actDuration,
         AlertType &alertType
     );
-    // void evaluate(float dbPassRate);
-    int evaluateConditions(double currentDb, int thresholdDb);
-    bool evaluatePassed(float passRate);
-    void assignAffirmationSteps(
-        std::vector<EventStep> &affirmationSteps
-    );
-    void assignCorrectionSteps(
-        std::vector<EventStep> &correctionSteps
-    );
-    void processStep(EventStep step, float passRate);
 
 private:
     HttpEndpoint<MicState> _httpEndpoint;
@@ -126,7 +115,6 @@ private:
     int32_t* intSamples = new int32_t[SAMPLES_SHORT];
 
     QueueHandle_t samplesQueue;
-    QueueHandle_t eventsQueue;
     float _real[SAMPLES_SHORT];
     float _imag[SAMPLES_SHORT];
     float _weighingFactors[SAMPLES_SHORT];
