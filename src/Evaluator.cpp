@@ -16,10 +16,20 @@
 
 #define I2S_TASK_STACK 2048
 
+#ifndef RF_PIN
+#define RF_PIN 21
+#endif
+
 Evaluator::Evaluator(
   AppSettingsService *appSettingsService) : 
     _appSettingsService(appSettingsService)
 {
+  pinMode(RF_PIN, OUTPUT);
+  if (!OpenShock::CommandHandler::Init()) {
+    ESP_LOGW(TAG, "Unable to initialize OpenShock");
+  } else {
+    OpenShock::CommandHandler::SetRfTxPin(RF_PIN);
+  }
 }
 
 void Evaluator::begin() {
