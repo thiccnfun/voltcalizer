@@ -17,8 +17,6 @@
 #include <MicStateService.h>
 // #include <PsychicHttpServer.h>
 
-#define RF_PIN            21
-
 // -------------
 PsychicHttpServer server;
 
@@ -42,17 +40,8 @@ void setup()
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
 
-  // set output pins for collar RF
-  pinMode(RF_PIN, OUTPUT);
-
   delay(1000); // Safety
     
-  if (!OpenShock::CommandHandler::Init()) {
-    ESP_LOGW(TAG, "Unable to initialize OpenShock");
-  } else {
-    OpenShock::CommandHandler::SetRfTxPin(RF_PIN);
-  }
-
   esp32sveltekit.begin();
   appSettingsService.begin();
   micStateService.begin();
