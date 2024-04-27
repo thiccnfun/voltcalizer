@@ -195,11 +195,18 @@ void MicStateService::setupReader() {
     double thresholdDb = 80;
     AlertType alertType = AlertType::NONE;
     int alertDuration = 1000;
-    int alertStrength = 50;
+    int alertStrength = 10;
 
     // assignConditionValues(thresholdDb);
     // assignDurationValues(idleDuration, actDuration);
-    assignRoutineConditionValues(thresholdDb, idleDuration, actDuration, alertType);
+    assignRoutineConditionValues(
+      thresholdDb, 
+      idleDuration, 
+      actDuration, 
+      alertType, 
+      alertDuration, 
+      alertStrength
+    );
     // int sequenceDuration = actDuration;
     int eventCountdown = actDuration;
 
@@ -315,9 +322,14 @@ void MicStateService::setupReader() {
                 // NOTE: maybe delay accordingly
                 startTime = currentTime;
 
-                // assignConditionValues(thresholdDb);
-                // assignDurationValues(idleDuration, actDuration);
-                assignRoutineConditionValues(thresholdDb, idleDuration, actDuration, alertType);
+                assignRoutineConditionValues(
+                  thresholdDb, 
+                  idleDuration, 
+                  actDuration, 
+                  alertType, 
+                  alertDuration, 
+                  alertStrength
+                );
                 // sequenceDuration = actDuration;
                 ticks = 0;
                 ticksPassed = 0;
@@ -637,7 +649,9 @@ void MicStateService::assignRoutineConditionValues(
     double &dbThreshold,
     int &idleDuration,
     int &actDuration,
-    AlertType &alertType
+    AlertType &alertType,
+    int &alertDuration,
+    int &alertStrength
 ) {
   _appSettingsService->read([&](AppSettings &settings) {
     if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
@@ -659,6 +673,8 @@ void MicStateService::assignRoutineConditionValues(
     }
 
     alertType = settings.alertType;
+    alertDuration = settings.alertDuration;
+    alertStrength = settings.alertStrength;
   });
 }
 

@@ -98,7 +98,9 @@ protected:
         double &dbThreshold,
         int &idleDuration,
         int &actDuration,
-        AlertType &alertType
+        AlertType &alertType,
+        int &alertDuration,
+        int &alertStrength
     );
 
 private:
