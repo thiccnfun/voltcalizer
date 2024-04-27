@@ -18,6 +18,11 @@ export enum AlertType {
     COLLAR_VIBRATION,
 }
 
+export enum PassType {
+    FIRST_PASS,
+    GRADED,
+}
+
 export type AppSettings = {
     idle_period_min_ms: number;
     idle_period_max_ms: number;
@@ -27,6 +32,8 @@ export type AppSettings = {
     decibel_threshold_max: number;
     mic_sensitivity: 26 | 27 | 28 | 29;
     alert_type: AlertType;
+    alert_duration: number;
+    alert_strength: number;
 
     collar_min_shock: number;
     collar_max_shock: number;
@@ -35,6 +42,9 @@ export type AppSettings = {
 
     correction_steps: EventStep[];
     affirmation_steps: EventStep[];
+
+    pass_type: PassType;
+    pass_threshold: number;
 };
 
 export type EventStep = {
