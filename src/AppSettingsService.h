@@ -81,7 +81,7 @@ public:
 
     AlertType alertType = AlertType::NONE;
     int alertDuration = 1000;
-    double alertStrength = 1.0;
+    int alertStrength = 100;
 
     PassType passType = PassType::FIRST_PASS;
     double passThreshold = 0;
