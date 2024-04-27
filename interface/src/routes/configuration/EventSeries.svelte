@@ -7,6 +7,7 @@
     import MDVibration from '~icons/tabler/device-mobile-vibration';
 	import { EventType, type EventStep, RangeType } from '$lib/types';
     import { settings } from '$lib/stores/settings';
+	import { handleFormatterPercentage, handleFormatterSeconds } from '../utils';
     // export let close: () => void;
     // import { modal } from 'daisyui/dist/full.js';
 
@@ -17,8 +18,7 @@
 
     settings.subscribe(value => steps = value[dataKey]);
 
-    const handleFormatterSeconds = (value: number) => `${value} second${value !== 1 ? 's' : ''}`;
-    const handleFormatterPercentage = (value: number) => `${Math.floor(value * 100)}%`;
+
 
     function addStep() {
         const newStep: EventStep = {
