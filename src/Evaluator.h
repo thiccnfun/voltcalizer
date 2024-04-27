@@ -50,12 +50,7 @@ protected:
 
 private:
     AppSettingsService *_appSettingsService;
-    void assignRoutineConditionValues(
-        double &dbThreshold,
-        int &idleDuration,
-        int &actDuration,
-        AlertType &alertType
-    );
+    void assignPassDetails(double &passThreshold);
     bool evaluatePassed(float passRate);
     void assignAffirmationSteps(
         std::vector<EventStep> &affirmationSteps

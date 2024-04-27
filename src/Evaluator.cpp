@@ -143,9 +143,9 @@ ConditionState Evaluator::evaluateConditions(double currentDb, int thresholdDb) 
 }
 
 bool Evaluator::evaluatePassed(float passRate) {
-
-  // TODO: different evaluation methods
-  return passRate >= 0.5;
+  double passThreshold = 0;
+  assignPassDetails(passThreshold);
+  return passRate >= passThreshold;
 }
 
 void Evaluator::processStep(EventStep step, float passRate) {
@@ -217,32 +217,9 @@ double Evaluator::valueFromRangeType(RangeType rangeType, std::vector<double> ra
   return range[0];
 }
 
-void Evaluator::assignRoutineConditionValues(
-    double &dbThreshold,
-    int &idleDuration,
-    int &actDuration,
-    AlertType &alertType
-) {
+void Evaluator::assignPassDetails(double &passThreshold) {
   _appSettingsService->read([&](AppSettings &settings) {
-    if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
-      dbThreshold = settings.decibelThresholdMin;
-    } else {
-      dbThreshold = random(settings.decibelThresholdMin, settings.decibelThresholdMax);
-    }
-
-    if (settings.actionPeriodMaxMs == settings.actionPeriodMinMs) {
-      actDuration = settings.actionPeriodMinMs;
-    } else {
-      actDuration = random(settings.actionPeriodMinMs, settings.actionPeriodMaxMs);
-    }
-
-    if (settings.idlePeriodMaxMs == settings.idlePeriodMinMs) {
-      idleDuration = settings.idlePeriodMinMs;
-    } else {
-      idleDuration = random(settings.idlePeriodMinMs, settings.idlePeriodMaxMs);
-    }
-
-    alertType = settings.alertType;
+    passThreshold = settings.passThreshold;
   });
 }
 
