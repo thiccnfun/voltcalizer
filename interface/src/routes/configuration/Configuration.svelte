@@ -16,8 +16,9 @@
 	import TestCollarModal from './TestCollarModal.svelte';
 	import EventSeries from './EventSeries.svelte';
 	import type { AppSettings } from '$lib/types';
-	import { AlertType } from '$lib/types';
+	import { AlertType, PassType } from '$lib/types';
 	import { settings } from '$lib/stores/settings';
+	import { handleFormatterPercentage, handleFormatterSeconds } from '../utils';
 
 	// type AppSettings = {
 	// 	led_on: boolean;
@@ -54,6 +55,10 @@
 	let loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
 	let micSensitivity = [$settings.mic_sensitivity];
 	let alertType = $settings.alert_type;
+	let passType = $settings.pass_type;
+	let passThreshold = [$settings.pass_threshold];
+	let alertDuration = [$settings.alert_duration];
+	let alertStrength = [$settings.alert_strength];
 
 	// async function getAppSettings() {
 	// 	try {
@@ -103,6 +108,12 @@
 			actionRanges = [$settings.action_period_min_ms / 1000, $settings.action_period_max_ms / 1000];
 			loudnessRanges = [$settings.decibel_threshold_min, $settings.decibel_threshold_max];
 			alertType = $settings.alert_type;
+			alertDuration = [$settings.alert_duration / 1000];
+			alertStrength = [$settings.alert_strength];
+			passType = $settings.pass_type;
+			passThreshold = [$settings.pass_threshold];
+
+			console.log('alertStrength', alertStrength);
 
 			// if (micState.ecd > ecdMax || ecdMax === Infinity) {
 			// 	ecdMax = micState.ecd;
@@ -149,7 +160,11 @@
 			collar_max_shock: shockRanges[1],
 			collar_min_vibe: vibeRanges[0],
 			collar_max_vibe: vibeRanges[1],
+			alert_duration: alertDuration[0] * 1000,
+			alert_strength: alertStrength[0],
 			alert_type: alertType,
+			pass_type: passType,
+			pass_threshold: passThreshold[0],
 
 			correction_steps: $settings.correction_steps,
 			affirmation_steps: $settings.affirmation_steps,
@@ -236,6 +251,47 @@
 						bind:values={actionRanges} 
 					/>
                 </div>
+
+
+				
+                <div class="form-control">
+                    <label for="action_period" class="label">
+                        <span class="label-text mr-4">Pass On</span>
+						<select 
+							class="select select-bordered select-sm mr-auto" 
+							bind:value={passType}
+						>
+							<option 
+								value={PassType.FIRST_PASS}
+								title="Stop evaluating as soon as the target condition is met."
+							>First Pass</option>
+							<option 
+								value={PassType.GRADED}
+								title="Evaluates the percentage of time the target condition is met."
+							>Graded</option>
+						</select>
+                    </label>
+                </div>
+				{#if passType === PassType.GRADED}
+					<div class="form-control">
+						<label for="alert_strength" class="label">
+							<span class="label-text">Pass Threshold</span>
+						</label>
+						<RangeSlider 
+							formatter={handleFormatterPercentage} 
+							pips 
+							float 
+							min={0.01}
+							max={1}
+							step={0.01}
+							pipstep={10}
+							first=label 
+							last=label 
+							bind:values={passThreshold}
+						/>
+					</div>
+				{/if}
+				
                 <div class="form-control">
                     <label for="action_period" class="label">
                         <span class="label-text mr-4">Alert Type</span>
@@ -249,6 +305,45 @@
 						</select>
                     </label>
                 </div>
+
+				{#if alertType === AlertType.COLLAR_BEEP || alertType === AlertType.COLLAR_VIBRATION}
+					<div class="form-control">
+						<label for="alert_duration" class="label">
+							<span class="label-text">Alert Duration</span>
+						</label>
+						<RangeSlider 
+							pips 
+							float 
+							min={0.5}
+							max={5}
+							pipstep={10}
+							step={0.1}
+							handleFormatter={handleFormatterSeconds} 
+							first=label 
+							last=label 
+							bind:values={alertDuration}
+						/>
+					</div>
+				{/if}
+				{#if alertType === AlertType.COLLAR_VIBRATION}
+					<div class="form-control">
+						<label for="alert_strength" class="label">
+							<span class="label-text">Alert Strength</span>
+						</label>
+						<RangeSlider 
+							formatter={handleFormatterPercentage} 
+							pips 
+							float 
+							min={0.01}
+							max={1}
+							step={0.01}
+							pipstep={10}
+							first=label 
+							last=label 
+							bind:values={alertStrength}
+						/>
+					</div>
+				{/if}
 			  </div>
 			</div>
 
