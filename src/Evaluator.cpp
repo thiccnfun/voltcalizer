@@ -83,6 +83,8 @@ void Evaluator::queueAlert(AlertType alertType, int alertDuration, int alertStre
     dbPassRate: 0
   };
 
+  // TODO: limit strength by settings if vibration
+
   xQueueSend(eventsQueue, &eq, portMAX_DELAY);
 }
 
