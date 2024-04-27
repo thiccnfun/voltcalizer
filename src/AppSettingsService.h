@@ -33,6 +33,11 @@ enum class AlertType {
     COLLAR_VIBRATION,
 };
 
+enum class PassType {
+    FIRST_PASS,
+    GRADED,
+};
+
 enum class EventType {
     COLLAR_BEEP,
     COLLAR_VIBRATION,
@@ -75,6 +80,11 @@ public:
     int collarMaxVibe = 100;
 
     AlertType alertType = AlertType::NONE;
+    int alertDuration = 1000;
+    double alertStrength = 1.0;
+
+    PassType passType = PassType::FIRST_PASS;
+    double passThreshold = 0;
 
     std::vector<EventStep> correctionSteps;
     std::vector<EventStep> affirmationSteps;
@@ -91,8 +101,10 @@ public:
         root["collar_min_shock"] = settings.collarMinShock;
         root["collar_max_shock"] = settings.collarMaxShock;
         root["alert_type"] = static_cast<int>(settings.alertType);
-
-      
+        root["alert_duration"] = settings.alertDuration;
+        root["alert_strength"] = settings.alertStrength;
+        root["pass_type"] = static_cast<int>(settings.passType);
+        root["pass_threshold"] = settings.passThreshold;
 
         JsonArray correctionStepsArray = root.createNestedArray("correction_steps");
         for (const auto &step : settings.correctionSteps)
@@ -127,6 +139,10 @@ public:
         settings.collarMinVibe = root["collar_min_vibe"] | settings.collarMinVibe;
         settings.collarMaxVibe = root["collar_max_vibe"] | settings.collarMaxVibe;
         settings.alertType = static_cast<AlertType>(root["alert_type"].as<int>());
+        settings.alertDuration = root["alert_duration"] | settings.alertDuration;
+        settings.alertStrength = root["alert_strength"] | settings.alertStrength;
+        settings.passType = static_cast<PassType>(root["pass_type"].as<int>());
+        settings.passThreshold = root["pass_threshold"] | settings.passThreshold;
 
         JsonArray correctionStepsArray = root["correction_steps"];
         settings.correctionSteps.clear();
