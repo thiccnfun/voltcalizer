@@ -113,8 +113,6 @@
 			passType = $settings.pass_type;
 			passThreshold = [$settings.pass_threshold];
 
-			console.log('alertStrength', alertStrength);
-
 			// if (micState.ecd > ecdMax || ecdMax === Infinity) {
 			// 	ecdMax = micState.ecd;
 			// 	ecdProgress.set(0);
@@ -331,16 +329,11 @@
 							<span class="label-text">Alert Strength</span>
 						</label>
 						<RangeSlider 
-							formatter={handleFormatterPercentage} 
 							pips 
 							float 
-							min={0.01}
-							max={1}
-							step={0.01}
-							pipstep={10}
 							first=label 
 							last=label 
-							bind:values={alertStrength}
+							bind:values={alertStrength} 
 						/>
 					</div>
 				{/if}
