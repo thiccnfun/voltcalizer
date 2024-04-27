@@ -196,6 +196,7 @@ void MicStateService::setupReader() {
     AlertType alertType = AlertType::NONE;
     int alertDuration = 1000;
     int alertStrength = 10;
+    PassType passType = PassType::FIRST_PASS;
 
     // assignConditionValues(thresholdDb);
     // assignDurationValues(idleDuration, actDuration);
@@ -205,7 +206,8 @@ void MicStateService::setupReader() {
       actDuration, 
       alertType, 
       alertDuration, 
-      alertStrength
+      alertStrength,
+      passType
     );
     // int sequenceDuration = actDuration;
     int eventCountdown = actDuration;
@@ -216,7 +218,6 @@ void MicStateService::setupReader() {
     bool resetConditions = false;
     int ticks = 0;
     int ticksPassed = 0;
-    bool stopOnPass = true; // TODO: make this configurable
     bool doEvaluation = false;
     float dbPassRate = 0;
     int alertTime = 1500; // 1 second plus a little buffer
@@ -277,7 +278,7 @@ void MicStateService::setupReader() {
 
                   // if setup to stop on the first pass, proceed to evaluation
                   // otherwise, continue to accumulate ticks and evaluate at the end
-                  if (stopOnPass) {
+                  if (passType == PassType::FIRST_PASS) {
                     dbPassRate = 1;
                     doEvaluation = true;
                     resetConditions = true;
@@ -328,7 +329,8 @@ void MicStateService::setupReader() {
                   actDuration, 
                   alertType, 
                   alertDuration, 
-                  alertStrength
+                  alertStrength,
+                  passType
                 );
                 // sequenceDuration = actDuration;
                 ticks = 0;
@@ -651,7 +653,8 @@ void MicStateService::assignRoutineConditionValues(
     int &actDuration,
     AlertType &alertType,
     int &alertDuration,
-    int &alertStrength
+    int &alertStrength,
+    PassType &passType
 ) {
   _appSettingsService->read([&](AppSettings &settings) {
     if (settings.decibelThresholdMax == settings.decibelThresholdMin) {
@@ -675,6 +678,7 @@ void MicStateService::assignRoutineConditionValues(
     alertType = settings.alertType;
     alertDuration = settings.alertDuration;
     alertStrength = settings.alertStrength;
+    passType = settings.passType;
   });
 }
 

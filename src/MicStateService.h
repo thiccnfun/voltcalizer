@@ -100,7 +100,8 @@ protected:
         int &actDuration,
         AlertType &alertType,
         int &alertDuration,
-        int &alertStrength
+        int &alertStrength,
+        PassType &passType
     );
 
 private:
