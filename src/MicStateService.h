@@ -26,7 +26,6 @@
 #include <HttpEndpoint.h>
 #include <MqttPubSub.h>
 #include <WebSocketServer.h>
-#include <NotificationEvents.h>
 // #include <WebSocketClient.h>
 
 #define MIC_STATE_ENDPOINT_PATH "/rest/micState"
@@ -81,8 +80,7 @@ public:
         PsychicHttpServer *server,
         SecurityManager *securityManager,
         PsychicMqttClient *mqttClient,
-        AppSettingsService *appSettingsService,
-        NotificationEvents *notificationEvents
+        AppSettingsService *appSettingsService
     );
     void begin();
     void setupReader();
@@ -111,7 +109,6 @@ private:
     //  WebSocketClient<LightState> _webSocketClient;
     PsychicMqttClient *_mqttClient;
     AppSettingsService *_appSettingsService;
-    NotificationEvents *_notificationEvents;
     ArduinoFFT<float> *_fft;
     AudioAnalysis _audioInfo;
     float samples[SAMPLES_SHORT] __attribute__((aligned(4)));

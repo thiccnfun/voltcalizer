@@ -28,8 +28,7 @@ AppSettingsService appSettingsService =
 MicStateService micStateService = MicStateService(&server,
                                                         esp32sveltekit.getSecurityManager(),
                                                         esp32sveltekit.getMqttClient(),
-                                                        &appSettingsService,
-                                                        esp32sveltekit.getNotificationEvents());
+                                                        &appSettingsService);
 
 
 

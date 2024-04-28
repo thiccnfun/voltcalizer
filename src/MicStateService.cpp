@@ -120,8 +120,7 @@ MicStateService::MicStateService(
   PsychicHttpServer *server,
   SecurityManager *securityManager,
   PsychicMqttClient *mqttClient,
-  AppSettingsService *appSettingsService,
-  NotificationEvents *notificationEvents) : 
+  AppSettingsService *appSettingsService) : 
     _httpEndpoint(
       MicState::read,
       MicState::update,
@@ -142,8 +141,7 @@ MicStateService::MicStateService(
       AuthenticationPredicates::IS_AUTHENTICATED
     ),
     _mqttClient(mqttClient),
-    _appSettingsService(appSettingsService),
-    _notificationEvents(notificationEvents)
+    _appSettingsService(appSettingsService)
 {
 }
 
