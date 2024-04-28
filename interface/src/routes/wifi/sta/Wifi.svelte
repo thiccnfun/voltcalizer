@@ -32,39 +32,9 @@
 	import Cancel from '~icons/tabler/x';
 	import Check from '~icons/tabler/check';
 	import InfoDialog from '$lib/components/InfoDialog.svelte';
+	import type { KnownNetworkItem, WifiSettings, WifiStatus } from '$lib/types/models';
 
-	type WifiStatus = {
-		status: number;
-		local_ip: string;
-		mac_address: string;
-		rssi: number;
-		ssid: string;
-		bssid: string;
-		channel: number;
-		subnet_mask: string;
-		gateway_ip: string;
-		dns_ip_1: string;
-		dns_ip_2?: string;
-	};
-
-	type WifiSettings = {
-		hostname: string;
-		priority_RSSI: boolean;
-		wifi_networks: networkItem[];
-	};
-
-	type networkItem = {
-		ssid: string;
-		password: string;
-		static_ip_config: boolean;
-		local_ip?: string;
-		subnet_mask?: string;
-		gateway_ip?: string;
-		dns_ip_1?: string;
-		dns_ip_2?: string;
-	};
-
-	let networkEditable: networkItem = {
+	let networkEditable: KnownNetworkItem = {
 		ssid: '',
 		password: '',
 		static_ip_config: false,
@@ -81,7 +51,7 @@
 	let wifiStatus: WifiStatus;
 	let wifiSettings: WifiSettings;
 
-	let dndNetworkList: networkItem[] = [];
+	let dndNetworkList: KnownNetworkItem[] = [];
 
 	let showWifiDetails = false;
 
@@ -136,12 +106,6 @@
 	}, 5000);
 
 	onDestroy(() => clearInterval(interval));
-
-	onMount(() => {
-		if (!$page.data.features.security || $user.admin) {
-			getWifiSettings();
-		}
-	});
 
 	async function postWiFiSettings(data: WifiSettings) {
 		try {
@@ -484,17 +448,17 @@
 		{/await}
 	</div>
 
-	<div class="bg-base-200 shadow-lg relative grid w-full max-w-2xl self-center overflow-hidden">
-		<div
-			class="min-h-16 flex w-full items-center justify-between space-x-3 p-0 text-xl font-medium"
-		>
-			Saved Networks
-		</div>
-		{#await getWifiSettings()}
-			<Spinner />
-		{:then nothing}
-			<div class="relative w-full overflow-visible">
-				{#if !$page.data.features.security || $user.admin}
+	{#if !$page.data.features.security || $user.admin}
+		<div class="bg-base-200 shadow-lg relative grid w-full max-w-2xl self-center overflow-hidden">
+			<div
+				class="min-h-16 flex w-full items-center justify-between space-x-3 p-0 text-xl font-medium"
+			>
+				Saved Networks
+			</div>
+			{#await getWifiSettings()}
+				<Spinner />
+			{:then nothing}
+				<div class="relative w-full overflow-visible">
 					<button
 						class="btn btn-primary text-primary-content btn-md absolute -top-14 right-16"
 						on:click={() => {
@@ -517,55 +481,53 @@
 					>
 						<Scan class="h-6 w-6" /></button
 					>
-				{/if}
 
-				<div
-					class="overflow-x-auto space-y-1"
-					transition:slide|local={{ duration: 300, easing: cubicOut }}
-				>
-					<DragDropList
-						id="networks"
-						type={VerticalDropZone}
-						itemSize={60}
-						itemCount={dndNetworkList.length}
-						on:drop={onDrop}
-						let:index
+					<div
+						class="overflow-x-auto space-y-1"
+						transition:slide|local={{ duration: 300, easing: cubicOut }}
 					>
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
-						<div class="rounded-box bg-base-100 flex items-center space-x-3 px-4 py-2">
-							<div class="mask mask-hexagon bg-primary h-auto w-10 shrink-0">
-								<Router class="text-primary-content h-auto w-full scale-75" />
-							</div>
-							<div>
-								<div class="font-bold">{dndNetworkList[index].ssid}</div>
-							</div>
-							{#if !$page.data.features.security || $user.admin}
-								<div class="flex-grow" />
-								<div class="space-x-0 px-0 mx-0">
-									<button
-										class="btn btn-ghost btn-sm"
-										on:click={() => {
-											handleEdit(index);
-										}}
-									>
-										<Edit class="h-6 w-6" /></button
-									>
-									<button
-										class="btn btn-ghost btn-sm"
-										on:click={() => {
-											confirmDelete(index);
-										}}
-									>
-										<Delete class="text-error h-6 w-6" />
-									</button>
+						<DragDropList
+							id="networks"
+							type={VerticalDropZone}
+							itemSize={60}
+							itemCount={dndNetworkList.length}
+							on:drop={onDrop}
+							let:index
+						>
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<div class="rounded-box bg-base-100 flex items-center space-x-3 px-4 py-2">
+								<div class="mask mask-hexagon bg-primary h-auto w-10 shrink-0">
+									<Router class="text-primary-content h-auto w-full scale-75" />
 								</div>
-							{/if}
-						</div>
-					</DragDropList>
+								<div>
+									<div class="font-bold">{dndNetworkList[index].ssid}</div>
+								</div>
+								{#if !$page.data.features.security || $user.admin}
+									<div class="flex-grow" />
+									<div class="space-x-0 px-0 mx-0">
+										<button
+											class="btn btn-ghost btn-sm"
+											on:click={() => {
+												handleEdit(index);
+											}}
+										>
+											<Edit class="h-6 w-6" /></button
+										>
+										<button
+											class="btn btn-ghost btn-sm"
+											on:click={() => {
+												confirmDelete(index);
+											}}
+										>
+											<Delete class="text-error h-6 w-6" />
+										</button>
+									</div>
+								{/if}
+							</div>
+						</DragDropList>
+					</div>
 				</div>
-			</div>
 
-			{#if !$page.data.features.security || $user.admin}
 				<div class="divider mb-0" />
 				<div
 					class="flex flex-col gap-2 p-0"
@@ -786,7 +748,7 @@
 						</div>
 					</form>
 				</div>
-			{/if}
-		{/await}
-	</div>
+			{/await}
+		</div>
+	{/if}
 </SettingsCard>

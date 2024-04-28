@@ -3,132 +3,132 @@
 @tailwind utilities;
 
 .blink {
-  animation: blink 0.33s linear infinite;
-}
-@keyframes blink {
-  50% {
-    opacity: 0;
+    animation: blink 0.33s linear infinite;
   }
-}
-
-/* https://simeydotme.github.io/svelte-range-slider-pips/en/recipes/daisy-ui/ */
-
-/**
- * Range Slider default size/colors
- */
-.rangeSlider {
-  font-size: 18px;
-  --handleBg: var(--range-inactive);
-}
-
-.rangeSlider.focus { 
-  --handleBg: var(--range); 
-}
-
-/**
- * Track / Bar
- */
-.rangeSlider .rangeBar {
-  height: 1.4em;
-  top: .25em;
-  /* translate:  0 -50%; */
-}
-
-.rangeSlider.range .rangeBar {
-  border-radius: 0;
-}
-
-.rangeSlider.range.min .rangeBar {
-  border-radius: 100px 0 0 100px;
-}
-
-.rangeSlider.range.max .rangeBar {
-  border-radius: 0 100px 100px 0;
-}
-
-/** 
- * Handles / Floats
- */
-.rangeSlider .rangeNub,
-.rangeSlider.focus .rangeNub {
-  background: white;
-  border: 3px solid var(--handleBg);
-}
-
-.rangeSlider .rangeFloat {
-  border-radius: 2em;
-  min-width: 2em;
-}
-
-.rangeSlider.range .rangeFloat {
-  left: 0;
-  transform: translateX(100%);
-}
-
-/* float position on the first handle (or min-range slider) */
-.rangeSlider.range.min .rangeFloat,
-.rangeSlider.range.min:hover .rangeFloat,
-.rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2) .rangeFloat,
-.rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2):hover .rangeFloat {
-  left: auto;
-  right: 0;
-  transform: translateX(-1.5em);
-  background: transparent;
-}
-
-/* float position on the second handle (or max-range slider) */
-.rangeSlider.range.max .rangeFloat,
-.rangeSlider.range.max:hover .rangeFloat,
-.rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1) .rangeFloat,
-.rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1):hover .rangeFloat {
-  left: 0;
-  transform: translateX(1.5em);
-  background: transparent;
-}
-
-/* flip the float position on the first handle when range is < 20 */
-.daisy-ui.minFlip .rangeSlider.range.min .rangeFloat,
-.daisy-ui.minFlip .rangeSlider.range.min:hover .rangeFloat,
-.daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2) .rangeFloat,
-.daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2):hover .rangeFloat {
-  left: 0;
-  transform: translateX(1.75em);
-  background: var(--handleBg);
-}
-
-/* flip the float position on the second handle when range is > 80 */
-.daisy-ui.maxFlip .rangeSlider.range.max .rangeFloat,
-.daisy-ui.maxFlip .rangeSlider.range.max:hover .rangeFloat,
-.daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1) .rangeFloat,
-.daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1):hover .rangeFloat {
-  left: auto;
-  right: 0;
-  transform: translateX(-1.75em);
-  background: var(--handleBg);
-}
-
-/**
- * Pips
- */
-.rangeSlider .rangePips {
-  z-index: 1;
-}
-
-.rangeSlider .pip {
-  border-radius: 3px;
-  background: var(--slider);
-  translate: -1px -5px;
-}
-
-.rangeSlider .pip.selected,
-.rangeSlider .pip.in-range {
-  width: 3px;
-  background: var(--handleBg);
-  translate: -1px -1px;
-}
-
-.rangeSlider .pip.in-range {
-  width: 1px;
-  height: 4px;
-  background: hsla(0, 0%, 100%, 0.75);
-}
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  
+  /* https://simeydotme.github.io/svelte-range-slider-pips/en/recipes/daisy-ui/ */
+  
+  /**
+   * Range Slider default size/colors
+   */
+  .rangeSlider {
+    font-size: 18px;
+    --handleBg: var(--range-inactive);
+  }
+  
+  .rangeSlider.focus { 
+    --handleBg: var(--range); 
+  }
+  
+  /**
+   * Track / Bar
+   */
+  .rangeSlider .rangeBar {
+    height: 1.4em;
+    top: .25em;
+    /* translate:  0 -50%; */
+  }
+  
+  .rangeSlider.range .rangeBar {
+    border-radius: 0;
+  }
+  
+  .rangeSlider.range.min .rangeBar {
+    border-radius: 100px 0 0 100px;
+  }
+  
+  .rangeSlider.range.max .rangeBar {
+    border-radius: 0 100px 100px 0;
+  }
+  
+  /** 
+   * Handles / Floats
+   */
+  .rangeSlider .rangeNub,
+  .rangeSlider.focus .rangeNub {
+    background: white;
+    border: 3px solid var(--handleBg);
+  }
+  
+  .rangeSlider .rangeFloat {
+    border-radius: 2em;
+    min-width: 2em;
+  }
+  
+  .rangeSlider.range .rangeFloat {
+    left: 0;
+    transform: translateX(100%);
+  }
+  
+  /* float position on the first handle (or min-range slider) */
+  .rangeSlider.range.min .rangeFloat,
+  .rangeSlider.range.min:hover .rangeFloat,
+  .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2) .rangeFloat,
+  .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2):hover .rangeFloat {
+    left: auto;
+    right: 0;
+    transform: translateX(-1.5em);
+    background: transparent;
+  }
+  
+  /* float position on the second handle (or max-range slider) */
+  .rangeSlider.range.max .rangeFloat,
+  .rangeSlider.range.max:hover .rangeFloat,
+  .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1) .rangeFloat,
+  .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1):hover .rangeFloat {
+    left: 0;
+    transform: translateX(1.5em);
+    background: transparent;
+  }
+  
+  /* flip the float position on the first handle when range is < 20 */
+  .daisy-ui.minFlip .rangeSlider.range.min .rangeFloat,
+  .daisy-ui.minFlip .rangeSlider.range.min:hover .rangeFloat,
+  .daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2) .rangeFloat,
+  .daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(2):hover .rangeFloat {
+    left: 0;
+    transform: translateX(1.75em);
+    background: var(--handleBg);
+  }
+  
+  /* flip the float position on the second handle when range is > 80 */
+  .daisy-ui.maxFlip .rangeSlider.range.max .rangeFloat,
+  .daisy-ui.maxFlip .rangeSlider.range.max:hover .rangeFloat,
+  .daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1) .rangeFloat,
+  .daisy-ui.rangeFlip .rangeSlider.range:not(.min):not(.max) .rangeHandle:nth-child(1):hover .rangeFloat {
+    left: auto;
+    right: 0;
+    transform: translateX(-1.75em);
+    background: var(--handleBg);
+  }
+  
+  /**
+   * Pips
+   */
+  .rangeSlider .rangePips {
+    z-index: 1;
+  }
+  
+  .rangeSlider .pip {
+    border-radius: 3px;
+    background: var(--slider);
+    translate: -1px -5px;
+  }
+  
+  .rangeSlider .pip.selected,
+  .rangeSlider .pip.in-range {
+    width: 3px;
+    background: var(--handleBg);
+    translate: -1px -1px;
+  }
+  
+  .rangeSlider .pip.in-range {
+    width: 1px;
+    height: 4px;
+    background: hsla(0, 0%, 100%, 0.75);
+  }
