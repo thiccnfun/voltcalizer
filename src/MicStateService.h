@@ -17,25 +17,14 @@
 
 #include <AppSettingsService.h>
 #include <Evaluator.h>
-
-// #include <complex>
-// #include <vector>
-
-#include <AudioAnalysis.h>
-#include <ArduinoFFT.h>
 #include <HttpEndpoint.h>
 #include <MqttPubSub.h>
 #include <WebSocketServer.h>
+#include <AudioAnalyzer.h>
 // #include <WebSocketClient.h>
 
 #define MIC_STATE_ENDPOINT_PATH "/rest/micState"
 #define MIC_STATE_SOCKET_PATH "/ws/micState"
-
-
-#define SAMPLE_RATE       16000 // Hz, fixed to design of IIR filters
-#define SAMPLE_BITS       32    // bits
-#define SAMPLE_T          int32_t 
-#define SAMPLES_SHORT     (SAMPLE_RATE / 8) // ~125ms
 
 class MicState
 {
@@ -84,14 +73,10 @@ public:
     );
     void begin();
     void setupReader();
-    void initializeI2s();
 
 protected:
     Evaluator *_evaluator;
-    void readerTask();
-    void eventsTask();
-    static void _readerTask(void *_this) { static_cast<MicStateService *>(_this)->readerTask(); }
-    // static void _eventsTask(void *_this) { static_cast<MicStateService *>(_this)->eventsTask(); }
+    AudioAnalyzer *_audioAnalyzer;
     void assignRoutineConditionValues(
         double &dbThreshold,
         int &idleDuration,
@@ -106,18 +91,8 @@ private:
     HttpEndpoint<MicState> _httpEndpoint;
     MqttPubSub<MicState> _mqttPubSub;
     WebSocketServer<MicState> _webSocketServer;
-    //  WebSocketClient<LightState> _webSocketClient;
     PsychicMqttClient *_mqttClient;
     AppSettingsService *_appSettingsService;
-    ArduinoFFT<float> *_fft;
-    AudioAnalysis _audioInfo;
-    float samples[SAMPLES_SHORT] __attribute__((aligned(4)));
-    int32_t* intSamples = new int32_t[SAMPLES_SHORT];
-
-    QueueHandle_t samplesQueue;
-    float _real[SAMPLES_SHORT];
-    float _imag[SAMPLES_SHORT];
-    float _weighingFactors[SAMPLES_SHORT];
 
     void registerConfig();
     void updateState(
@@ -127,11 +102,6 @@ private:
         int thresholdDb,
         float dbPassRate
     );
-    float calculatePitch();
-    void printVector(double *vData, uint16_t bufferSize, uint8_t scaleType);
-    // void fft(const std::vector<std::complex<float>>& input, std::vector<std::complex<float>>& output);
-    void computeFrequencies(uint8_t bandSize);
-
 };
 
 #endif
